@@ -1,0 +1,210 @@
+h1 {margin-top:0;}
+p {margin-top:0;}
+
+.yogart {
+  display: inline-block;
+  max-width: calc(90%);
+  max-height: calc(100%);
+  width: auto;
+  height: auto;
+  margin-top: 0.5%;
+  margin-bottom: 1%;
+}
+
+body 
+  {
+    background-color: #091057;
+    color: white;
+    text-align: center;
+    width: 97%;
+    max-width: 1148px;
+    margin:auto;
+    font-family: "Merriweather", serif;
+    font-weight: 500;
+    font-style: normal;
+  }
+main {display: block;}
+
+.left-align {text-align: left;}
+.faq-width {max-width: 720px;}
+
+h4 
+  {
+    margin: 5px;
+  }
+/* All links */
+a:link {color:white; text-decoration: none; transition: 0.2s;}
+a:visited {color:white; text-decoration: none;}
+a:hover {color:#EC8305; text-decoration: none; transition: 0s;}
+a:active {color:#EC8305; text-decoration: none;}
+
+input[type=checkbox]:checked+label[for="ExclusiveCast"]
+    {
+      color:#04AA6D
+    }
+    
+input[type=checkbox]:checked+label:not([for="ExclusiveCast"])
+    {
+      border: 6px solid #EC8305;
+    }
+
+input[type=submit] {
+  background-color:#EC8305; 
+  color: #091057;
+  padding: 18px 32px;
+  text-decoration: none;
+  margin: 16px 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 24px;
+}
+input[type=submit]:hover {background-color:rgb(255, 171, 45); color:#232a88;}
+input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
+
+.hiddencb
+  {
+    position:absolute;
+    visibility: hidden;
+    opacity: 0;
+  }
+
+.noselect
+  {
+    user-select: none;
+  }
+.castcb
+  {
+    height: 64px;
+    line-height: 160px;
+    width: 64px;
+    background-color: #ffffff;
+    background: url(yogthumbs.webp);
+    border-radius: 50%;
+    border: 6px solid #091057;
+    display: inline-block;
+  }
+/*#region Castmembers Avatars */
+.lewis      { background-position-x: calc(-64px * 0); }
+.simon      { background-position-x: calc(-64px * 1); }
+.sips       { background-position-x: calc(-64px * 2); }
+.duncan     { background-position-x: calc(-64px * 3); }
+.rythian    { background-position-x: calc(-64px * 4); }
+.ben        { background-position-x: calc(-64px * 5); }
+.angor      { background-position-x: calc(-64px * 6); }
+.zylus      { background-position-x: calc(-64px * 7); }
+.zoey       { background-position-x: calc(-64px * 8); }
+.nilsey     { background-position-x: calc(-64px * 9); } /* 10 */
+.ravs       { background-position-x: calc(-64px * 10); }
+.barry      { background-position-x: calc(-64px * 11); }
+.lydia      { background-position-x: calc(-64px * 12); }
+.bouphe     { background-position-x: calc(-64px * 13); }
+.osie       { background-position-x: calc(-64px * 14); }
+.briony     { background-position-x: calc(-64px * 15); }
+.kirsty     { background-position-x: calc(-64px * 16); }
+.boba       { background-position-x: calc(-64px * 17); }
+.pedguin    { background-position-x: calc(-64px * 18); }
+.trott      { background-position-x: calc(-64px * 19); } /* 20 */
+.smith      { background-position-x: calc(-64px * 20); }
+.ross       { background-position-x: calc(-64px * 21); }
+.hulmes     { background-position-x: calc(-64px * 22); }
+.daf        { background-position-x: calc(-64px * 23); }
+.breeh      { background-position-x: calc(-64px * 24); }
+.pyrion     { background-position-x: calc(-64px * 25); }
+.daltos     { background-position-x: calc(-64px * 26); }
+.rambler    { background-position-x: calc(-64px * 27); }
+.spiff      { background-position-x: calc(-64px * 28); }
+.martyn     { background-position-x: calc(-64px * 29); } /* 30 */
+.kim        { background-position-x: calc(-64px * 30); }
+.gee        { background-position-x: calc(-64px * 31); }
+.wilsonator { background-position-x: calc(-64px * 32); }
+.ryan       { background-position-x: calc(-64px * 33); }
+.vadact     { background-position-x: calc(-64px * 34); }
+.bekki      { background-position-x: calc(-64px * 35); }
+.mousie     { background-position-x: calc(-64px * 36); }
+.fionn      { background-position-x: calc(-64px * 37); }
+.mango      { background-position-x: calc(-64px * 38); }
+.shadow     { background-position-x: calc(-64px * 39); } /* 40 */
+.lolip      { background-position-x: calc(-64px * 40); }
+/*#endregion */
+
+.wilsonator {text-indent: -10px;} /* Long name; lazy frontend fix */
+
+
+/* Scroll bar */
+::-webkit-scrollbar {width: 20px;}
+::-webkit-scrollbar-track {background-color: transparent;}
+::-webkit-scrollbar-thumb 
+    {
+      background-color: #d6dee1;
+      border-radius: 20px;
+      border: 6px solid transparent;
+      background-clip: content-box;
+    }
+::-webkit-scrollbar-thumb:hover {background-color: #a8bbbf;}
+
+.searchresults {display:block; padding-bottom: 20px;}
+
+.card
+  {
+    display: inline-block;
+    scroll-snap-align: center;
+    box-sizing: border-box;
+    padding: 10px 10px;
+    min-height: 60px;
+    max-height: 300px;
+    width: calc(95%);
+    background-color: #232a88;
+    border-radius: 24px;
+    text-align: left;
+    margin-top: 20px !important;
+  }
+.TitleWidth
+  { 
+  display: inline-block;
+  width: calc(100%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  }
+.ytimg {
+  display: inline-block;
+  max-width: calc(100%);
+  max-height: 244px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+  transition: 1s;
+}
+.ytimg:hover { border-radius: 0px; transition: 1s;}
+
+.answersframe { /* deprecated?*/
+    position: relative;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    border: 1;
+  }
+
+
+footer {
+  display: inline-block;
+  height: 60px;
+  padding-left: 20px;
+  padding-right: 20px;
+  color: #d6dee1;
+  margin: 0 auto;
+  margin-top: 2%;
+  margin-bottom: 2%;
+  border-radius: 24px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 60px;
+}
+.folinks:link {color:#d6dee1; text-decoration: none; transition: 2s;}
+.folinks:visited {color:#d6dee1; text-decoration: none;}
+.folinks:hover {color:#EC8305; text-decoration: none; transition: 0s;}
+.folinks:active {color:#EC8305; text-decoration: none;}
