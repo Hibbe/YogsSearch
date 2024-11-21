@@ -1,3 +1,4 @@
+/* #region Page globals */
 h1 {margin-top:0;}
 p {margin-top:0;}
 
@@ -32,6 +33,19 @@ h4
   {
     margin: 5px;
   }
+
+/* Scroll bar */
+::-webkit-scrollbar {width: 20px;}
+::-webkit-scrollbar-track {background-color: transparent;}
+::-webkit-scrollbar-thumb 
+    {
+      background-color: #d6dee1;
+      border-radius: 20px;
+      border: 6px solid transparent;
+      background-clip: content-box;
+    }
+::-webkit-scrollbar-thumb:hover {background-color: #a8bbbf;}
+
 /* All links */
 a:link {color:white; text-decoration: none; transition: 0.2s;}
 a:visited {color:white; text-decoration: none;}
@@ -61,6 +75,8 @@ input[type=submit] {
 input[type=submit]:hover {background-color:rgb(255, 171, 45); color:#232a88;}
 input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
 
+/* #endregion Page globals */
+/* #region Creator selector panel */
 .hiddencb
   {
     position:absolute;
@@ -83,6 +99,7 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
     border: 6px solid #091057;
     display: inline-block;
   }
+/* #endregion Creator selector panel */
 /*#region Castmembers Avatars */
 .lewis      { background-position-x: calc(-64px * 0); }
 .simon      { background-position-x: calc(-64px * 1); }
@@ -130,33 +147,27 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
 .wilsonator {text-indent: -10px;} /* Long name; lazy frontend fix */
 
 
-/* Scroll bar */
-::-webkit-scrollbar {width: 20px;}
-::-webkit-scrollbar-track {background-color: transparent;}
-::-webkit-scrollbar-thumb 
-    {
-      background-color: #d6dee1;
-      border-radius: 20px;
-      border: 6px solid transparent;
-      background-clip: content-box;
-    }
-::-webkit-scrollbar-thumb:hover {background-color: #a8bbbf;}
 
-.searchresults {display:block; padding-bottom: 20px;}
 
+
+
+/* #region Search cards */
+.searchresults {display:block; padding-bottom: 20px;} /* Search cards frame; Adds 20px between last card and footer/next element */
 .card
   {
     display: inline-block;
+    position: relative;
     scroll-snap-align: center;
     box-sizing: border-box;
     padding: 10px 10px;
-    min-height: 60px;
+    height: auto;
     max-height: 300px;
     width: calc(95%);
     background-color: #232a88;
     border-radius: 24px;
     text-align: left;
     margin-top: 20px !important;
+    z-index: 1;
   }
 .TitleWidth
   { 
@@ -166,19 +177,75 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
   overflow: hidden;
   text-overflow: ellipsis;
   }
+
 .ytimg {
   display: inline-block;
   max-width: calc(100%);
-  max-height: 244px;
+  max-height: 235px; /* 244 */
   width: auto;
   height: auto;
+  margin-bottom: 0px !important;
   border-radius: 8px;
   object-fit: cover;
   transition: 1s;
 }
 .ytimg:hover { border-radius: 0px; transition: 1s;}
 
-.answersframe { /* deprecated?*/
+.cardReport {
+  display: block;
+  margin: -2px 8px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+  font-stretch: condensed;
+  font-size: 12px;
+}
+.cardReport:link {color:#8a8e91; text-decoration: none;}
+.cardReport:visited {color:#8a8e91; text-decoration: none;}
+.cardReport:hover {color:#be6b05; text-decoration: none;}
+.cardReport:active {color:#be6b05; text-decoration: none;}
+
+/*#endregion searchcards*/
+/*#region reportcard */
+.repcard {
+  background-color: #161D70;
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
+  margin: -20px 0px 0px 0px !important;
+  padding-top: 25px;
+  z-index: 0 !important;
+}
+
+textarea {
+  width: 100%;
+  height: 150px;
+  padding: 12px 20px;
+  margin-top: 2px;
+  box-sizing: border-box;
+  border: 2px solid #535bcf;
+  border-radius: 12px;
+  background-color: #373d9277;
+  color: white;
+  font-size: 16px;
+  resize: none;
+}
+
+input[type=submit].RepInlineSubmit
+{
+  background-color:#2c349e; 
+  color: white;
+  padding: 3px 12px;
+  text-decoration: none;
+  margin: 10px 8px -4px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+/* #endregion reportcard */
+
+/*.answersframe {  //deprecated?
     position: relative;
     top: 0;
     left: 0;
@@ -187,9 +254,9 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
     width: 100%;
     height: 100%;
     border: 1;
-  }
+  } */
 
-
+/* #region footer */
 footer {
   display: inline-block;
   height: 60px;
@@ -208,3 +275,4 @@ footer {
 .folinks:visited {color:#d6dee1; text-decoration: none;}
 .folinks:hover {color:#EC8305; text-decoration: none; transition: 0s;}
 .folinks:active {color:#EC8305; text-decoration: none;}
+/* #endregion footer */

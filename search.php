@@ -15,30 +15,20 @@ function getVideosByCreators(PDO $pdo, array $creators) {
 $dsn = "sqlite:$db";
 
 if (isset($_GET['iid']) and (count($_GET['iid'])) != 1 and count($_GET['iid']) <= 12){
-
     try {
         $pdo = new PDO($dsn);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $creators = array_map('htmlspecialchars', $_GET['iid']);
         $videos = getVideosByCreators($pdo, $creators);
-        /*if ($videos) {
-            // Process the results
-            foreach ($videos as $video) {
-                $ytID = $video['YoutubeID'];
-                echo get_youtube_details($ytID, 'title');
-            }
-        } else {
-            echo "No videos found.";
-        } */
-
-    } catch (PDOException $e) {
+    } 
+    catch (PDOException $e) {
         echo "Database error: " . $e->getMessage();
-    } finally {
-        $pdo = null;
-    }
+    } 
+    finally {$pdo = null;}
 }
 else {$creators = 1;}
 
+if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportfunction
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -69,11 +59,22 @@ else {$creators = 1;}
                     if (!isset($videos) and $creators != 1) { echo "<br>"."No creators selected";}
                     else if($creators == 1 ) { echo "<br>"."Please select between 2 and 12 creators";}
                     else if(empty($videos)) { echo "<br>"."No videos found";}
-                    else foreach ($videos as $video): ?>
+                    else foreach ($videos as $key=>$video): ?>
                         <div class="card">
                             <h4><a alt="<?= $video['YoutubeID']; ?>" href="https://youtube.com/watch?v=<?= $video['YoutubeID']; ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= $video['Title']; ?></span></h4>
-                            <p><img width="640" height="360" class="ytimg" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= $video['YoutubeID']; ?>/maxresdefault.jpg"></a></p>
+                            <p class="ytimg"><img width="640" height="360" class="ytimg" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= $video['YoutubeID']; ?>/maxresdefault.jpg"></a></p>
+                            <?php if ($key == 0) { ?><a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>&repid=<?=$video['YoutubeID']; ?>">Report error</a><?php } else { ?><a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>&repid=<?=$video['YoutubeID']; ?>#repbox">Report error</a><?php } ?> <!-- Don't jump on first card -->
                         </div>
+                    <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
+                        <div class="card repcard">
+                            <form action="" id="RepForm">
+                                <input type="hidden" id="RepYtId" name="RepYtId" value="<?=$video['YoutubeID']; ?>"> <!-- if isset($GET_blabla) Post redirect get -->
+                                <label for="repimp" id="repbox">Describe the issue:</label><br>
+                                <textarea id="repimp" name="repimp" maxlength="5000" required>Why u no clickable? pls</textarea><br>
+                                <input type="submit" class="RepInlineSubmit" value="Send">
+                            </form>
+                        </div>  
+                    <?php } ?>
                 <?php endforeach; ?>
             </article>
         <a href='/'> << Go back</a>
