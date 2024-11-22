@@ -13,27 +13,43 @@ function getVideosByCreators(PDO $pdo, array $creators) {
 
 
 $dsn = "sqlite:$db";
+$dsrep = "sqlite:$dbrep";
 
-if (isset($_GET['iid']) and (count($_GET['iid'])) != 1 and count($_GET['iid']) <= 12){
-    try {
-        $pdo = new PDO($dsn);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $creators = array_map('htmlspecialchars', $_GET['iid']);
-        $videos = getVideosByCreators($pdo, $creators);
+if (!isset($_SESSION)) session_start();
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {   
+    if(isset($_POST['RepYtId'])){ 
+        
+        echo $_POST['repimp']; 
+    
     } 
-    catch (PDOException $e) {
-        echo "Database error: " . $e->getMessage();
-    } 
-    finally {$pdo = null;}
+$creators = 1; $urlrep = 0;
 }
-else {$creators = 1;}
 
+
+else if (isset($_GET['iid']) and (count($_GET['iid'])) >= 2 and count($_GET['iid']) <= 12){
+        try {
+            $pdo = new PDO($dsn);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $creators = array_map('htmlspecialchars', $_GET['iid']);
+            $videos = getVideosByCreators($pdo, $creators);
+        } 
+        catch (PDOException $e) {
+            echo "Database error: " . $e->getMessage();
+        } 
+        finally {$pdo = null;}
+    }
+else {$creators = 1; $urlrep = 0;}
 if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportfunction
+
+
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Yogsearch | <?php if (!isset($videos)) { echo "No creators selected";} else if(empty($videos)) { echo "No videos found";} else echo("Found ".count($videos)." videos with ".join(' & ', array_filter(array_merge(array(join(', ', array_slice($_GET['iid'], 0, -1))), array_slice($_GET['iid'], -1)), 'strlen')));  ?> </title>
+        <title>Yogsearch | <?php if (!isset($videos)) { echo "Please select between 2 and 12 creators";} else if(empty($videos)) { echo "No videos found";} else echo("Found ".count($videos)." videos with ".join(' & ', array_filter(array_merge(array(join(', ', array_slice($_GET['iid'], 0, -1))), array_slice($_GET['iid'], -1)), 'strlen')));  ?> </title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <link rel="preload" href="/yogsearch.webp" as="image">
@@ -56,8 +72,7 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
             <article class="searchresults">  <!-- Here go the results of the search-->
 
                 <?php  
-                    if (!isset($videos) and $creators != 1) { echo "<br>"."No creators selected";}
-                    else if($creators == 1 ) { echo "<br>"."Please select between 2 and 12 creators";}
+                    if(!isset($videos)) { echo "<br>"."Please select between 2 and 12 creators";}
                     else if(empty($videos)) { echo "<br>"."No videos found";}
                     else foreach ($videos as $key=>$video): ?>
                         <div class="card">
@@ -67,10 +82,10 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
                         </div>
                     <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
                         <div class="card repcard">
-                            <form action="" id="RepForm">
+                            <form action="?iid%5B%5D=<?= $urlrep; ?>" method="POST" id="RepForm"> <!-- Currently fake redirect  -->
                                 <input type="hidden" id="RepYtId" name="RepYtId" value="<?=$video['YoutubeID']; ?>"> <!-- if isset($GET_blabla) Post redirect get -->
                                 <label for="repimp" id="repbox">Describe the issue:</label><br>
-                                <textarea id="repimp" name="repimp" maxlength="5000" required>Why u no clickable? pls</textarea><br>
+                                <textarea id="repimp" name="repimp" maxlength="5000" required>OH GOHD IT DOEHS NAHT WORK YEHT CAPTEIN</textarea><br>
                                 <input type="submit" class="RepInlineSubmit" value="Send">
                             </form>
                         </div>  
@@ -80,7 +95,7 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
         <a href='/'> << Go back</a>
         </main>
         <footer style="text-align:center;">
-            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/Yogsearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Report error</a>
+            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Report error</a>
         </footer>
     </body>
 </html>

@@ -56,7 +56,7 @@
             <a href='/'> << Go back</a> </div><br>
         </main>
         <footer>
-            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/Yogsearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Report error</a>
+            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Report error</a>
         </footer>
     </body>
 </html>
