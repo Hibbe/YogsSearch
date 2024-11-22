@@ -245,8 +245,8 @@ input[type=submit].RepInlineSubmit
   border-radius: 6px;
   font-size: 16px;
 }
-input[type=submit]:hover {background-color:#434cca;}
-input[type=submit]:active {background-color:#434cca;}
+input[type=submit].RepInlineSubmit:hover {background-color:#434cca;}
+input[type=submit].RepInlineSubmit:active {background-color:#434cca;}
 
 /* #endregion reportcard */
 
