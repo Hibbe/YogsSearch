@@ -10,19 +10,52 @@ function getVideosByCreators(PDO $pdo, array $creators) {
     $stmt->execute($creators);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+function insertreport($pdo,array $data) {
 
+    $sql = "INSERT INTO videoreports (vidID, repinput) VALUES (:vidID, :repinput)";
+    $stmt = $pdo->prepare($sql); 
+    $params = [
+        ':vidID' => $data['RepYtId'],
+        ':repinput' => $data['repimp']
+    ];
+    $stmt->execute($params);
+    return true; // Indicate successful insertion 
+  }
 
 $dsn = "sqlite:$db";
 $dsrep = "sqlite:$dbrep";
 
-if (!isset($_SESSION)) session_start();
+
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {   
-    if(isset($_POST['RepYtId'])){ 
+    if (!isset($_SESSION)) session_start();
+    $RepYtId = htmlspecialchars($_POST['RepYtId']);
+    $repimp = htmlspecialchars($_POST['repimp']);
+    unset($_POST);
+    $_SESSION['RepYtId'] = $RepYtId;
+    $_SESSION['repimp'] = $repimp;
+    if(isset($_SESSION['repimp']) and isset($_SESSION['RepYtId'])){ 
+        $pdo = new PDO($dsrep);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        try {
+            if (insertreport($pdo, $_SESSION)) {
+                header( "Location: {$_SERVER['REQUEST_URI']}&rep=success", true, 303 );
+                exit();
+            } else {
+                header( "Location: {$_SERVER['REQUEST_URI']}&rep=fail", true, 303 );
+                exit();
+            }
         
-        echo $_POST['repimp']; 
-    
-    } 
+          } 
+          catch (PDOException $e) {
+            echo "Database error: " . $e->getMessage();
+          } 
+          finally {
+            $pdo = null;
+          }
+
+    }
+    else {echo "fail";}
 $creators = 1; $urlrep = 0;
 }
 
@@ -76,16 +109,15 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
                     else if(empty($videos)) { echo "<br>"."No videos found";}
                     else foreach ($videos as $key=>$video): ?>
                         <div class="card">
-                            <h4><a alt="<?= $video['YoutubeID']; ?>" href="https://youtube.com/watch?v=<?= $video['YoutubeID']; ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= $video['Title']; ?></span></h4>
+                        <label for="vidTITLE" id="TI<?= $video['YoutubeID']; ?>"><h4><a alt="<?= $video['YoutubeID']; ?>" id="TI<?= $video['YoutubeID']; ?>" href="https://youtube.com/watch?v=<?= $video['YoutubeID']; ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= $video['Title']; ?></span></h4></label>
                             <p class="ytimg"><img width="640" height="360" class="ytimg" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= $video['YoutubeID']; ?>/maxresdefault.jpg"></a></p>
-                            <?php if ($key == 0) { ?><a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>&repid=<?=$video['YoutubeID']; ?>">Report error</a><?php } else { ?><a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>&repid=<?=$video['YoutubeID']; ?>#repbox">Report error</a><?php } ?> <!-- Don't jump on first card -->
+                            <a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>&repid=<?=$video['YoutubeID']; ?>#TI<?=$video['YoutubeID']; ?>">Report error</a>
                         </div>
                     <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
                         <div class="card repcard">
-                            <form action="?iid%5B%5D=<?= $urlrep; ?>" method="POST" id="RepForm"> <!-- Currently fake redirect  -->
+                            <form action="" method="POST" id="RepForm">
                                 <input type="hidden" id="RepYtId" name="RepYtId" value="<?=$video['YoutubeID']; ?>"> <!-- if isset($GET_blabla) Post redirect get -->
-                                <label for="repimp" id="repbox">Describe the issue:</label><br>
-                                <textarea id="repimp" name="repimp" maxlength="5000" required>OH GOHD IT DOEHS NAHT WORK YEHT CAPTEIN</textarea><br>
+                                <textarea id="repimp" placeholder="Describe the issue ..." name="repimp" maxlength="5000" required></textarea><br>
                                 <input type="submit" class="RepInlineSubmit" value="Send">
                             </form>
                         </div>  
