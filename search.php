@@ -1,7 +1,7 @@
 <?php
 require_once 'config.php';
 
-function getVideosByCreators(PDO $pdo, array $creators) {
+function getVideosByCreators(PDO $pdo, array $creators) { // Search function query
 
     $creator_list = str_repeat('?, ', count($creators) - 1) . '?';
     $creator_count = count($creators);    
@@ -10,7 +10,7 @@ function getVideosByCreators(PDO $pdo, array $creators) {
     $stmt->execute($creators);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
-function insertreport($pdo,array $data) {
+function insertreport($pdo,array $data) { // Report function input
 
     $sql = "INSERT INTO videoreports (vidID, repinput) VALUES (:vidID, :repinput)";
     $stmt = $pdo->prepare($sql); 
@@ -19,7 +19,7 @@ function insertreport($pdo,array $data) {
         ':repinput' => $data['repimp']
     ];
     $stmt->execute($params);
-    return true; // Indicate successful insertion 
+    return true; // Indicate successful insert
   }
 
 $dsn = "sqlite:$db";
@@ -103,25 +103,34 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
         <main>
         <a href='/'> << Go back</a>
             <article class="searchresults">  <!-- Here go the results of the search-->
-
                 <?php  
                     if(!isset($videos)) { echo "<br>"."Please select between 2 and 12 creators";}
                     else if(empty($videos)) { echo "<br>"."No videos found";}
-                    else foreach ($videos as $key=>$video): ?>
+                    else foreach ($videos as $video): {  //Search result cards?>
                         <div class="card">
                         <label for="vidTITLE" id="TI<?= $video['YoutubeID']; ?>"><h4><a alt="<?= $video['YoutubeID']; ?>" id="TI<?= $video['YoutubeID']; ?>" href="https://youtube.com/watch?v=<?= $video['YoutubeID']; ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= $video['Title']; ?></span></h4></label>
                             <p class="ytimg"><img width="640" height="360" class="ytimg" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= $video['YoutubeID']; ?>/maxresdefault.jpg"></a></p>
-                            <a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>&repid=<?=$video['YoutubeID']; ?>#TI<?=$video['YoutubeID']; ?>">Report error</a>
+                            <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
+                            <a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>#TI<?=$video['YoutubeID']; ?>">Report issue</a>
+                            <?php } else { ?>
+                            <a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>&repid=<?=$video['YoutubeID']; ?>#TI<?=$video['YoutubeID']; ?>">Report issue</a>
+                            <?php } ?>
                         </div>
-                    <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
+                    <?php  if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID'] ) { //RepID is set in cardReport(href)?>
                         <div class="card repcard">
+                            <?php if (!isset($_GET['rep'])) { //report function popout?>
                             <form action="" method="POST" id="RepForm">
-                                <input type="hidden" id="RepYtId" name="RepYtId" value="<?=$video['YoutubeID']; ?>"> <!-- if isset($GET_blabla) Post redirect get -->
+                                <input type="hidden" id="RepYtId" name="RepYtId" value="<?=$video['YoutubeID']; ?>">
                                 <textarea id="repimp" placeholder="Describe the issue ..." name="repimp" maxlength="5000" required></textarea><br>
                                 <input type="submit" class="RepInlineSubmit" value="Send">
                             </form>
+                            <?php } else if (isset($_GET['rep']) and $_GET['rep'] == "success") { // Report confirmation function?>
+                                     <p style="margin:-2px; margin-left: 20px;"> Thanks for your report! </p>
+                            <?php } else if (isset($_GET['rep'])and $_GET['rep'] == "fail") { ?>
+                                     <p style="margin:-2px; margin-left: 20px;"> Your report was not submitted, please try again. </p>
+                            <?php } ?>
                         </div>  
-                    <?php } ?>
+                    <?php  } } ?>
                 <?php endforeach; ?>
             </article>
         <a href='/'> << Go back</a>
