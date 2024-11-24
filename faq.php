@@ -15,28 +15,27 @@
         </header>
         <main class="left-align">
         <a href='/'> << Go back</a> </div><br><br>
-            <section id="Faq">
-
+            <section id="about">
                 <p>Welcome to the beta release of Yogsearch!<br><br>
-                The purpose of this fan page is to make it easier to find Yogscast videos that include a particular set of creators.
-                While some creators appear together frequently, other pairings may be less frequent and harder to find.<br><br>
-                The biggest challenge facing this page is that every video has to be added manually. This is a slow and labour-intensive process that is also prone to errors. With thousands of videos released across nearly 50 channels since 2008, cataloguing them all is a momentous task. <br><br>
-                For this proof of concept beta I've added every Jingle Jam video since 2019. Undoubtedly I've missed a bunch, so please contact me so that I can fix it. <a href='/faq.php#contact' style="font-weight:900; text-decoration:underline;">(Info below)</a><br><br>
-                For the full release of Yogsearch I want everybody to be able to suggest videos to be added right here on the website. That feature is not ready yet, but stay tuned!<br><br>
+                The purpose of this <strong>fanpage</strong> is to make it easier to find videos featuring your favourite yogs.
+                While some yogs appear together frequently, other pairings may be less frequent and harder to find. Yogsearch aims to make finding these videos easier. <br><br>
+                For this proof of concept beta I've added every Jingle Jam video since 2019. If you find any missing videos please contact me.<br><br>
+                For the full release of Yogsearch you will be able to suggest videos to be added right here on the website. That feature is not ready yet, but stay tuned!<br><br>
                 
-                Finally, I hope you will have use of this website and I wish you a happy Jingle Jam christmas!<p style="text-align:right"><a href='https://www.youtube.com/watch?v=YyFQlyVmbII&t=510s'>I remain,</a> <br> H1bbe</p> 
+                Good luck in your queries and have a happy Jingle Jam christmas!<p style="text-align:right"> &ndash; H1bbe</p> 
                   </p>
-                
+            </section>
+            <section id="faq">
                 <h1>Frequently asked questions</h1>
                 <article>
-                <h3> I want to report an error!</h3>
-                <p>Great!<br><br>Please read through the rest of the FAQ to make sure the issue you've found was made in error. Soon you will be able to report an issue right here on this page. <br> For this beta, please <a href='/faq.php#contact' style="font-weight:900; text-decoration:underline;">contact me</a>. <br><br>Thank you for helping out. </p>
+                <h3> Can i send you some feedback?</h3>
+                <p>Absolutely!<br> Please contact me with missing videos, thoughts or ideas <a href='https://www.reddit.com/user/H1bbe/' style="font-weight:900; text-decoration:underline;" target="_blank">using this form (LINK)</a></p>
                 <h3> Is this website affiliated with the Yogscast?</h3>
-                <p>No. This is a fan-made page and is not created or endorsed by the Yogscast.</p>
+                <p>No. <br><br>This is a fanmade page and is not created, associated or endorsed by the Yogscast.</p>
                 <h3>Why are some Yogscast affiliated creators not included on this website?</h3>
                 <p>Only current Yogscast members are included in Yogsearch. <br> Unfortunately this means that some frequent guests of the Yogscast are not searchable though they may still appear in search results for videos made together with other Yogscast creators. </p>
                 <h3>Why is a certain video missing from the search results?</h3>
-                <p>There may be several causes for this.<br>A video may not yet have been added to Yogsearch, in which case, please feel free to report it to me.<br>If a video is published on a channel not affiliated with the Yogscast, it is unlikely that it will be included. <br>If a video features a former member of the Yogscast it will not be available on Yogsearch.    </p>
+                <p>There may be several reasons for this.<br><br>A video may not yet have been added to Yogsearch, in which case, please feel free to report it to me.<br>If a video is published on a channel not affiliated with the Yogscast, it is unlikely that it will be included. <br>Videos that feature former members of the Yogscast will not be available on Yogsearch.</p>
                 <h3> Can I request a feature to be added?</h3>
                 <p>Absolutely! Please contact me with your thoughts and ideas. I can't promise to implement them, but I'd love to add more beneficial features to the page.</p>
                 <h3> I could make this website much better than you! </h3>
@@ -48,15 +47,16 @@
                 <h1>Contact</h1>
                 <article>
                 <p>Reach me on:</p>
-                <p>Reddit <a href='https://www.reddit.com/user/H1bbe/' style="font-weight:900; text-decoration:underline;" target="_blank">/u/H1bbe</a></p>
-                <p>Discord <a href='https://discord.gg/hPyY9Rsu5H' style="font-weight:900; text-decoration:underline;" target="_blank">Yogsearch</p>
+                <p>Reddit: <a href='https://www.reddit.com/user/H1bbe/' style="font-weight:900; text-decoration:underline;" target="_blank">/u/H1bbe</a></p>
+                <p>Discord: <strong> H1bbe </strong></p>
                 </article>
             </section>
             <br> <br>
             <a href='/'> << Go back</a> </div><br>
         </main>
         <footer>
-            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Report error</a>
+            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Contribute</a>
+            <p class="fodisc">Yogsearch is a <strong>fanpage</strong> and is <strong>not associated with or endorsed</strong> by the Yogscast</p>
         </footer>
     </body>
 </html>

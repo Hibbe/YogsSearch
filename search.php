@@ -5,7 +5,7 @@ function getVideosByCreators(PDO $pdo, array $creators) { // Search function que
 
     $creator_list = str_repeat('?, ', count($creators) - 1) . '?';
     $creator_count = count($creators);    
-    $sql = "SELECT vl.YoutubeID, vl.Title FROM VideoList vl INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID INNER JOIN CastList cl ON cl.CastID = vc.CastID WHERE cl.CastName IN ($creator_list) GROUP BY vl.VideoID HAVING COUNT(*) = $creator_count LIMIT 10";
+    $sql = "SELECT vl.YoutubeID, vl.Title FROM VideoList vl INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID INNER JOIN CastList cl ON cl.CastID = vc.CastID WHERE cl.CastName IN ($creator_list) GROUP BY vl.VideoID HAVING COUNT(*) = $creator_count LIMIT 100";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($creators);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -60,7 +60,7 @@ $creators = 1; $urlrep = 0;
 }
 
 
-else if (isset($_GET['iid']) and (count($_GET['iid'])) >= 2 and count($_GET['iid']) <= 12){
+else if (isset($_GET['iid']) and (count($_GET['iid'])) >= 1 and count($_GET['iid']) <= 12){
         try {
             $pdo = new PDO($dsn);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -135,8 +135,9 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
             </article>
         <a href='/'> << Go back</a>
         </main>
-        <footer style="text-align:center;">
-            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Report error</a>
+        <footer>
+            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/faq.php#faq' class=folinks>Contribute</a>
+            <p class="fodisc">Yogsearch is a <strong>fanpage</strong> and is <strong>not associated with or endorsed</strong> by the Yogscast</p>
         </footer>
     </body>
 </html>
