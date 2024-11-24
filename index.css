@@ -181,10 +181,21 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
 .ytimg {
   display: inline-block;
   max-width: calc(100%);
-  max-height: 235px; /* 244 */
+  max-height: 320px; /* 244 */
   width: auto;
   height: auto;
   margin-bottom: 0px !important;
+  border-radius: 8px;
+  object-fit: cover;
+  transition: 1s;
+  overflow: hidden;
+}
+.ytimg img {
+  display: inline-block;
+  max-width: calc(100%);
+  max-height: 320px; /* 244 */
+  padding-top: 1%;
+  margin: -11% 0;
   border-radius: 8px;
   object-fit: cover;
   transition: 1s;

@@ -19,7 +19,7 @@
                 <p>Welcome to the beta release of Yogsearch!<br><br>
                 The purpose of this <strong>fanpage</strong> is to make it easier to find videos featuring your favourite yogs.
                 While some yogs appear together frequently, other pairings may be less frequent and harder to find. Yogsearch aims to make finding these videos easier. <br><br>
-                For this proof of concept beta I've added every Jingle Jam video since 2019. If you find any missing videos please contact me.<br><br>
+                For this proof of concept beta I've added every Jingle Jam video since 2019. If you find any missing videos please contact me.
                 For the full release of Yogsearch you will be able to suggest videos to be added right here on the website. That feature is not ready yet, but stay tuned!<br><br>
                 
                 Good luck in your queries and have a happy Jingle Jam christmas!<p style="text-align:right"> &ndash; H1bbe</p> 
@@ -36,6 +36,8 @@
                 <p>Only current Yogscast members are included in Yogsearch. <br> Unfortunately this means that some frequent guests of the Yogscast are not searchable though they may still appear in search results for videos made together with other Yogscast creators. </p>
                 <h3>Why is a certain video missing from the search results?</h3>
                 <p>There may be several reasons for this.<br><br>A video may not yet have been added to Yogsearch, in which case, please feel free to report it to me.<br>If a video is published on a channel not affiliated with the Yogscast, it is unlikely that it will be included. <br>Videos that feature former members of the Yogscast will not be available on Yogsearch.</p>
+                <h3>Will you add Twitch vods? </h3>
+                <p> Currently there are no plans to add twitch vods to Yogsearch. 
                 <h3> Can I request a feature to be added?</h3>
                 <p>Absolutely! Please contact me with your thoughts and ideas. I can't promise to implement them, but I'd love to add more beneficial features to the page.</p>
                 <h3> I could make this website much better than you! </h3>

@@ -109,7 +109,7 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
                     else foreach ($videos as $video): {  //Search result cards?>
                         <div class="card">
                         <label for="vidTITLE" id="TI<?= $video['YoutubeID']; ?>"><h4><a alt="<?= $video['YoutubeID']; ?>" id="TI<?= $video['YoutubeID']; ?>" href="https://youtube.com/watch?v=<?= $video['YoutubeID']; ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= $video['Title']; ?></span></h4></label>
-                            <p class="ytimg"><img width="640" height="360" class="ytimg" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= $video['YoutubeID']; ?>/maxresdefault.jpg"></a></p>
+                            <div class="ytimg"><img alt="Thumbnail" src="https://i.ytimg.com/vi/<?= $video['YoutubeID']; ?>/hqdefault.jpg"></a></div>
                             <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
                             <a class="cardReport" href="?iid%5B%5D=<?= $urlrep; ?>#TI<?=$video['YoutubeID']; ?>">Report issue</a>
                             <?php } else { ?>
