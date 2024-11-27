@@ -32,7 +32,7 @@
                     <input type="checkbox" class="hiddencb" id="Angor"      name="iid[]" value="Angor">          <label for="Angor"      class="castcb angor">Tom</label>
                     <input type="checkbox" class="hiddencb" id="Zylus"      name="iid[]" value="Zylus">          <label for="Zylus"      class="castcb zylus">Zylus</label>
                     <input type="checkbox" class="hiddencb" id="Zoey"       name="iid[]" value="Zoey">           <label for="Zoey"       class="castcb zoey">Zoey</label>
-                    <input type="checkbox" class="hiddencb" id="Nilsey"     name="iid[]" value="Nilsey">         <label for="Nilsey"     class="castcb nilsey">Nilsey</label> <!-- 10 -->
+                    <input type="checkbox" class="hiddencb" id="Nilesy"     name="iid[]" value="Nilesy">         <label for="Nilesy"     class="castcb nilesy">Nilesy</label> <!-- 10 -->
                     <input type="checkbox" class="hiddencb" id="Ravs"       name="iid[]" value="Ravs">           <label for="Ravs"       class="castcb ravs">Ravs</label>
                     <input type="checkbox" class="hiddencb" id="Barry"      name="iid[]" value="Barry">          <label for="Barry"      class="castcb barry">Harry</label>
                     <input type="checkbox" class="hiddencb" id="Lydia"      name="iid[]" value="Lydia">          <label for="Lydia"      class="castcb lydia">Lydia</label>

@@ -28,8 +28,8 @@
             <section id="faq">
                 <h1>Frequently asked questions</h1>
                 <article>
-                <h3> Can i send you some feedback?</h3>
-                <p>Absolutely!<br> Please contact me with missing videos, thoughts or ideas <a href='https://www.reddit.com/user/H1bbe/' style="font-weight:900; text-decoration:underline;" target="_blank">using this form (LINK)</a></p>
+                <h3> Can I send you some feedback?</h3>
+                <p>Absolutely!<br> Please contact me with missing videos, thoughts or ideas <a href='/search.php?iid%5B%5D=H1bbe&repid=nCJaCDPpmVw#TInCJaCDPpmVw' style="font-weight:900; text-decoration:underline;" target="_blank">using this form (LINK)</a></p>
                 <h3> Is this website affiliated with the Yogscast?</h3>
                 <p>No. <br><br>This is a fanmade page and is not created, associated or endorsed by the Yogscast.</p>
                 <h3>Why are some Yogscast affiliated creators not included on this website?</h3>

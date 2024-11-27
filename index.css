@@ -110,7 +110,7 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
 .angor      { background-position-x: calc(-64px * 6); }
 .zylus      { background-position-x: calc(-64px * 7); }
 .zoey       { background-position-x: calc(-64px * 8); }
-.nilsey     { background-position-x: calc(-64px * 9); } /* 10 */
+.nilesy     { background-position-x: calc(-64px * 9); } /* 10 */
 .ravs       { background-position-x: calc(-64px * 10); }
 .barry      { background-position-x: calc(-64px * 11); }
 .lydia      { background-position-x: calc(-64px * 12); }
