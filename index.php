@@ -17,7 +17,7 @@
     </head>
     <body>
         <header> 
-            <img width="800" height="289" src="yogsearch.webp" alt="The unofficial, unlicensed Yogsearch" class="yogart">
+            <img width="800" height="289" src="yogsearch.webp" alt="Yogsearch logo" class="yogart">
         </header>
         <main>
             <section class="noselect"> <!-- Search selector -->
