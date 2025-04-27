@@ -3,11 +3,12 @@ h1 {margin-top:0;}
 p {margin-top:0;}
 :root {color-scheme: dark;}
 
+
 .yogart {
   display: inline-block;
   max-width: calc(90%);
   max-height: calc(100%);
-  width: auto;
+  width: 800;
   height: auto;
   margin-top: 0.5%;
   margin-bottom: 1%;
@@ -100,6 +101,7 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
     border: 6px solid #091057;
     display: inline-block;
   }
+.castcb-contribute {border-color:#232a88;}
 /* #endregion Creator selector panel */
 /*#region Castmembers Avatars */
 .lewis      { background-position-x: calc(-64px * 0); }

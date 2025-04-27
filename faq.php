@@ -11,7 +11,7 @@
     </head>
     <body class="faq-width">
         <header> 
-            <img width="800" height="289" src="yogsearch.webp" alt="The unofficial, unlicensed Yogsearch" class="yogart"><br><br><br>
+            <img width="800" height="auto" src="yogsearch.webp" alt="Yogsearch logo" class="yogart"><br><br><br>
         </header>
         <main class="left-align">
         <a href='/'> << Go back</a> </div><br><br>

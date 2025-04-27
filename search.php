@@ -98,7 +98,7 @@ if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} //For reportf
     </head>
     <body>
         <header> 
-            <img width="800" height="289" src="yogsearch.webp" alt="The unofficial, unlicensed Yogsearch" class="yogart">
+            <img width="800" height="289" src="yogsearch.webp" alt="Yogsearch logo" class="yogart">
         </header>
         <main>
         <a href='/'> << Go back</a>
