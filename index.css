@@ -72,11 +72,35 @@ input[type=submit] {
   margin: 16px 2px 4px;
   cursor: pointer;
   border-radius: 4px;
+  border: 1px solid #070b3f;
   font-size: 24px;
 }
 input[type=submit]:hover {background-color:rgb(255, 171, 45); color:#232a88;}
 input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
 
+#PlusVideoSubmit {
+  padding: 0 0;
+  height: 30px;
+  aspect-ratio: 1/1;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 0px;
+  border-radius: 50%;
+}
+#PlusVideoRemove { /* Duplicated for backend reasons */
+  padding: 0 0;
+  height: 30px;
+  aspect-ratio: 1/1;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 0px;
+  border-radius: 50%;
+  transform: rotate(45deg);
+}
+
+input[type=url] {
+  vertical-align: middle;
+}
 /* #endregion Page globals */
 /* #region Creator selector panel */
 .hiddencb
@@ -104,50 +128,50 @@ input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
 .castcb-contribute {border-color:#232a88;}
 /* #endregion Creator selector panel */
 /*#region Castmembers Avatars */
-.lewis      { background-position-x: calc(-64px * 0); }
-.simon      { background-position-x: calc(-64px * 1); }
-.sips       { background-position-x: calc(-64px * 2); }
-.duncan     { background-position-x: calc(-64px * 3); }
-.rythian    { background-position-x: calc(-64px * 4); }
-.ben        { background-position-x: calc(-64px * 5); }
-.angor      { background-position-x: calc(-64px * 6); }
-.zylus      { background-position-x: calc(-64px * 7); }
-.zoey       { background-position-x: calc(-64px * 8); }
-.nilesy     { background-position-x: calc(-64px * 9); } /* 10 */
-.ravs       { background-position-x: calc(-64px * 10); }
-.barry      { background-position-x: calc(-64px * 11); }
-.lydia      { background-position-x: calc(-64px * 12); }
-.bouphe     { background-position-x: calc(-64px * 13); }
-.osie       { background-position-x: calc(-64px * 14); }
-.briony     { background-position-x: calc(-64px * 15); }
-.kirsty     { background-position-x: calc(-64px * 16); }
-.boba       { background-position-x: calc(-64px * 17); }
-.pedguin    { background-position-x: calc(-64px * 18); }
-.trott      { background-position-x: calc(-64px * 19); } /* 20 */
-.smith      { background-position-x: calc(-64px * 20); }
-.ross       { background-position-x: calc(-64px * 21); }
-.hulmes     { background-position-x: calc(-64px * 22); }
-.daf        { background-position-x: calc(-64px * 23); }
-.breeh      { background-position-x: calc(-64px * 24); }
-.pyrion     { background-position-x: calc(-64px * 25); }
-.daltos     { background-position-x: calc(-64px * 26); }
-.rambler    { background-position-x: calc(-64px * 27); }
-.spiff      { background-position-x: calc(-64px * 28); }
-.martyn     { background-position-x: calc(-64px * 29); } /* 30 */
-.kim        { background-position-x: calc(-64px * 30); }
-.gee        { background-position-x: calc(-64px * 31); }
-.wilsonator { background-position-x: calc(-64px * 32); }
-.ryan       { background-position-x: calc(-64px * 33); }
-.vadact     { background-position-x: calc(-64px * 34); }
-.bekki      { background-position-x: calc(-64px * 35); }
-.mousie     { background-position-x: calc(-64px * 36); }
-.fionn      { background-position-x: calc(-64px * 37); }
-.mango      { background-position-x: calc(-64px * 38); }
-.shadow     { background-position-x: calc(-64px * 39); } /* 40 */
-.lolip      { background-position-x: calc(-64px * 40); }
+.Lewis      { background-position-x: calc(-64px * 0); }
+.Simon      { background-position-x: calc(-64px * 1); }
+.Sips       { background-position-x: calc(-64px * 2); }
+.Duncan     { background-position-x: calc(-64px * 3); }
+.Rythian    { background-position-x: calc(-64px * 4); }
+.Ben        { background-position-x: calc(-64px * 5); }
+.Tom        { background-position-x: calc(-64px * 6); }
+.Zylus      { background-position-x: calc(-64px * 7); }
+.Zoey       { background-position-x: calc(-64px * 8); }
+.Nilesy     { background-position-x: calc(-64px * 9); } /* 10 */
+.Ravs       { background-position-x: calc(-64px * 10); }
+.Harry      { background-position-x: calc(-64px * 11); }
+.Lydia      { background-position-x: calc(-64px * 12); }
+.Bouphe     { background-position-x: calc(-64px * 13); }
+.Osie       { background-position-x: calc(-64px * 14); }
+.Briony     { background-position-x: calc(-64px * 15); }
+.Kirsty     { background-position-x: calc(-64px * 16); }
+.Boba       { background-position-x: calc(-64px * 17); }
+.Pedguin    { background-position-x: calc(-64px * 18); }
+.Trott      { background-position-x: calc(-64px * 19); } /* 20 */
+.Smith      { background-position-x: calc(-64px * 20); }
+.Ross       { background-position-x: calc(-64px * 21); }
+.Hulmes     { background-position-x: calc(-64px * 22); }
+.Daf        { background-position-x: calc(-64px * 23); }
+.Breeh      { background-position-x: calc(-64px * 24); }
+.Pyrion     { background-position-x: calc(-64px * 25); }
+.Daltos     { background-position-x: calc(-64px * 26); }
+.Rambler    { background-position-x: calc(-64px * 27); }
+.Spiff      { background-position-x: calc(-64px * 28); }
+.Martyn     { background-position-x: calc(-64px * 29); } /* 30 */
+.Kim        { background-position-x: calc(-64px * 30); }
+.Gee        { background-position-x: calc(-64px * 31); }
+.Wilsonator { background-position-x: calc(-64px * 32); }
+.Ryan       { background-position-x: calc(-64px * 33); }
+.Vadact     { background-position-x: calc(-64px * 34); }
+.Bekki      { background-position-x: calc(-64px * 35); }
+.Mousie     { background-position-x: calc(-64px * 36); }
+.Fionn      { background-position-x: calc(-64px * 37); }
+.Mango      { background-position-x: calc(-64px * 38); }
+.Shadow     { background-position-x: calc(-64px * 39); } /* 40 */
+.Lolip      { background-position-x: calc(-64px * 40); }
 /*#endregion */
 
-.wilsonator {text-indent: -10px;} /* Long name; lazy fix */
+.Wilsonator {text-indent: -10px;} /* Long name; lazy fix */
 
 
 

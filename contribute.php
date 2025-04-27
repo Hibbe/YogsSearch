@@ -24,8 +24,7 @@
             <article class="searchresults">  <!-- Here go the results of the search-->
                 <section class="noselect"> <!-- Search selector --> 
                     <div class="card card-contribute">
-                        Select castmembers in video <p></p>
-                    <form action="search.php">
+                    <form action="contribute.php">
                         <!--#region castmembers-->
                         <input type="checkbox" class="hiddencb" id="Lewis"      name="iid[]" value="Lewis">          <label for="Lewis"      class="castcb castcb-contribute lewis">Lewis</label>
                         <input type="checkbox" class="hiddencb" id="Simon"      name="iid[]" value="Simon">          <label for="Simon"      class="castcb castcb-contribute simon">Simon</label>
@@ -72,7 +71,11 @@
                     </div>
                 </section>
                     <div class="card card-contribute">
-                        Words
+                        <input type="url" name="VidId" id="VidId" placeholder="https://youtube.com/watch?v=" size="25" required title="URL should be a valid Youtube video link" value="https://www.youtube.com/watch?v=G7RxR28Zbco"> <input type="submit" id="PlusVideoRemove" value="＋" />
+                    </div>
+                    <br>
+                    <div class="card card-contribute">
+                    <input type="url" name="VidId" id="VidId" placeholder="https://youtube.com/watch?v=" size="25" required title="URL should be a valid Youtube video link" value="https://www.youtube.com/watch?v=G7RxR28Zbco"> <input type="submit" id="PlusVideoSubmit"  value="＋" />
                     </div>
                 <p> <!-- Here goes the search button -->
                     <input type="submit" id="Searchsubmit" value="Submit" />
