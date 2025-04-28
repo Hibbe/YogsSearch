@@ -173,11 +173,6 @@ input[type=url] {
 
 .Wilsonator {text-indent: -10px;} /* Long name; lazy fix */
 
-
-
-
-
-
 /* #region Search cards */
 .searchresults {display:block; padding-bottom: 20px;} /* Search cards frame; Adds 20px between last card and footer/next element */
 .card
@@ -202,6 +197,7 @@ input[type=url] {
     width: auto;
     text-align: center;
   }
+
 .TitleWidth
   { 
   display: inline-block;
