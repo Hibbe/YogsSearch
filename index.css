@@ -78,23 +78,23 @@ input[type=submit] {
 input[type=submit]:hover {background-color:rgb(255, 171, 45); color:#232a88;}
 input[type=submit]:active {background-color:rgb(255, 171, 45); color:#232a88;}
 
-#PlusVideoSubmit {
+.button {
+  background-color:#EC8305; 
+  color: #091057;
   padding: 0 0;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 50%;
+  border: 1px solid #070b3f;
+  font-size: 24px;
   height: 30px;
+  line-height: 0px;
   aspect-ratio: 1/1;
   text-align: center;
   vertical-align: middle;
-  line-height: 0px;
-  border-radius: 50%;
 }
-#PlusVideoRemove { /* Duplicated for backend reasons */
-  padding: 0 0;
-  height: 30px;
-  aspect-ratio: 1/1;
-  text-align: center;
-  vertical-align: middle;
-  line-height: 0px;
-  border-radius: 50%;
+
+#pvr { /* Duplicated for backend reasons */
   transform: rotate(45deg);
 }
 
