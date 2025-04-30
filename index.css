@@ -198,6 +198,8 @@ input[type=url] {
     text-align: center;
   }
 
+ /* Style the .message, .success, .error, .warning classes for contribute.php. Add a flash to .success (maybe a time out 1 min too?) for clarity when submitting several videos in a row */
+
 .TitleWidth
   { 
   display: inline-block;

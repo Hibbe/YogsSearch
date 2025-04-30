@@ -111,7 +111,7 @@ function insertVideoData(PDO $pdo, string $youtubeId, string $title, array $cast
         // 2. Get Cast IDs from CastNames
         // Create placeholders for the IN clause (e.g., ?,?,?)
         $placeholders = rtrim(str_repeat('?,', count($castNames)), ',');
-        $sqlGetCastIds = "SELECT CastID, CastName FROM CastList WHERE CastName IN ($placeholders)";
+        $sqlGetCastIds = "SELECT CastName, CastID FROM CastList WHERE CastName IN ($placeholders)";
         $stmtGetCastIds = $pdo->prepare($sqlGetCastIds);
         $stmtGetCastIds->execute($castNames);
         $castIdMap = $stmtGetCastIds->fetchAll(PDO::FETCH_KEY_PAIR); // Creates [CastName => CastID] map
@@ -131,14 +131,18 @@ function insertVideoData(PDO $pdo, string $youtubeId, string $title, array $cast
         $sqlCast = "INSERT INTO VideoCast (VideoID, CastID) VALUES (:videoId, :castId)";
         $stmtCast = $pdo->prepare($sqlCast);
         $stmtCast->bindParam(':videoId', $videoId, PDO::PARAM_INT);
-        $stmtCast->bindParam(':castId', $castId, PDO::PARAM_INT); // Bind placeholder
 
-        foreach ($castIdMap as $castName => $castId) {
-             if (!$stmtCast->execute()) {
-                 // Execution failed
-                 $pdo->rollBack();
-                 error_log("Failed to execute VideoCast insert for VideoID: $videoId, CastID: $castId. ErrorInfo: " . implode(", ", $stmtCast->errorInfo()));
-                 return false;
+        foreach ($castIdMap as $castName => $currentCastId) {
+            $params = [
+                ':videoId' => $videoId, // VideoID is the same for all cast members of this video
+                ':castId' => $currentCastId // Use the correct CastID for this iteration
+            ];
+             // Pass the parameters array directly to execute()
+            if (!$stmtCast->execute($params)) {
+            // Execution failed
+                $pdo->rollBack();
+                error_log("Failed to execute VideoCast insert for VideoID: $videoId, CastID: $currentCastId. ErrorInfo: " . implode(", ", $stmtCast->errorInfo()));
+            return false;
              }
         }
 
