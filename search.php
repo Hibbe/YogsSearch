@@ -1,29 +1,156 @@
 <?php
+session_start();
 require_once 'config.php';
 
-function getVideosByCreators(PDO $pdo, array $creators, int $page = 1, int $limit = 20) { // Search function query
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 1. Extract data from POST
+    $selected_iids = $_POST['iid'] ?? [];
+    $filter_channel = $_POST['filter_channel'] ?? '';
+    $filter_title = trim($_POST['filter_title'] ?? ''); // Trim whitespace
+    $filter_date_start = $_POST['filter_date_start'] ?? '';
+    $filter_date_end = $_POST['filter_date_end'] ?? '';
+    $filter_exclude_live = isset($_POST['filter_exclude_live']) ? 1 : 0; // 1 if checked, 0 otherwise
+    $filter_exclusive_cast = isset($_POST['filter_exclusive_cast']) ? 1 : 0;
+
+    // 2. Basic Validation/Sanitization (Add more as needed)
+    // Ensure iids are strings (or expected format)
+    $sanitized_iids = [];
+    if (is_array($selected_iids)) {
+        foreach ($selected_iids as $iid) {
+            // Example: Allow only alphanumeric - adjust if names have other chars
+            if (is_string($iid) && preg_match('/^[a-zA-Z0-9\s\-]+$/', $iid)) {
+                 $sanitized_iids[] = $iid;
+            }
+        }
+    }
+    // Only proceed if at least one valid creator was selected
+    if (empty($sanitized_iids)) {
+         // Handle error: Redirect back to index or show message
+         // For now, we'll just proceed, search will likely yield no results
+    }
+
+
+    // Sanitize other filters
+    // Channel ID format depends on what you store (e.g., 'UC...')
+    $filter_channel = htmlspecialchars($filter_channel); // Basic sanitization
+    $filter_title = htmlspecialchars($filter_title);
+    // Basic date validation (YYYY-MM-DD format)
+    $date_pattern = '/^\d{4}-\d{2}-\d{2}$/';
+    if (!preg_match($date_pattern, $filter_date_start)) $filter_date_start = '';
+    if (!preg_match($date_pattern, $filter_date_end)) $filter_date_end = '';
+
+
+    // 3. Store non-iid filters in Session
+    $_SESSION['search_filter_channel'] = $filter_channel;
+    $_SESSION['search_filter_title'] = $filter_title;
+    $_SESSION['search_filter_date_start'] = $filter_date_start;
+    $_SESSION['search_filter_date_end'] = $filter_date_end;
+    $_SESSION['search_filter_exclude_live'] = $filter_exclude_live;
+    $_SESSION['search_filter_exclusive_cast'] = $filter_exclusive_cast;
+    // Clear pagination page number when submitting a new search
+    $_SESSION['search_page'] = 1; // Start at page 1 for new filter submission
+
+
+    // 4. Construct Redirect URL with ONLY iid parameters
+    $redirect_url = 'search.php';
+    if (!empty($sanitized_iids)) {
+        // http_build_query correctly handles array parameters like iid[]
+        $redirect_url .= '?' . http_build_query(['iid' => $sanitized_iids]);
+    } else {
+        // Maybe redirect to index if no creators selected?
+        // $redirect_url = 'index.php?error=no_creators';
+    }
+
+    // 5. Perform Redirect
+    header("Location: " . $redirect_url);
+    exit; // Important to stop script execution after redirect
+
+}
+
+function getVideosByCreators(PDO $pdo, array $creators, int $page = 1, int $limit = 20, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0) {
 
     $creator_list = str_repeat('?, ', count($creators) - 1) . '?';
     $creator_count = count($creators);
-    $offset = ($page - 1) * $limit; // Calculate the offset
+    $offset = ($page - 1) * $limit;
 
-    $sql = "SELECT vl.YoutubeID, vl.Title
-            FROM VideoList vl
-            INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
-            INNER JOIN CastList cl ON cl.CastID = vc.CastID
-            WHERE cl.CastName IN ($creator_list)
-            GROUP BY vl.VideoID
-            HAVING COUNT(*) = :creator_count
-            LIMIT :limit OFFSET :offset"; // Use LIMIT and OFFSET with placeholders
+    // --- START: Dynamic SQL Building ---
+    $sqlBaseSelect = "SELECT vl.YoutubeID, vl.Title";
+    $sqlBaseFrom = "FROM VideoList vl
+                    INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
+                    INNER JOIN CastList cl ON cl.CastID = vc.CastID";
+    $sqlBaseWhere = "WHERE cl.CastName IN ($creator_list)"; // Base creator match
+
+    $sqlConditions = ""; // Additional WHERE conditions
+    $filterParams = []; // Parameters for WHERE/HAVING filters
+
+    // Channel Filter
+    if (!empty($filter_channel)) {
+        $sqlConditions .= " AND vl.channelName = :channelName"; 
+        $filterParams[':channelName'] = $filter_channel;       
+    }
+    // Title Filter
+    if (!empty($filter_title)) {
+        $sqlConditions .= " AND vl.Title LIKE :titleSearch";
+        $filterParams[':titleSearch'] = '%' . $filter_title . '%';
+    }
+    // Date Start Filter
+    if (!empty($filter_date_start)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) >= :dateStart";
+        $filterParams[':dateStart'] = $filter_date_start;
+    }
+    // Date End Filter
+    if (!empty($filter_date_end)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) <= :dateEnd";
+        $filterParams[':dateEnd'] = $filter_date_end;
+    }
+    // --- > NEW: Exclude Live Filter <---
+    if ($filter_exclude_live === 1) {
+        // Add condition to exclude if wasLive is 1 (or TRUE)
+        // Adjust '0' if your boolean logic is different (e.g., 'FALSE')
+        $sqlConditions .= " AND vl.wasLive = 0";
+    }
+
+    // Grouping
+    $sqlGroupBy = "GROUP BY vl.VideoID";
+
+    // --- > REVISED: Having Clause <---
+    $sqlHaving = "HAVING COUNT(DISTINCT cl.CastID) = :creator_count"; // Ensure all selected are present
+    if ($filter_exclusive_cast === 1) {
+        // If exclusive is checked, add condition for total cast count
+        $sqlHaving .= " AND (SELECT COUNT(vc_total.CastID) FROM VideoCast vc_total WHERE vc_total.VideoID = vl.VideoID) = :creator_count";
+        // Note: We reuse :creator_count placeholder, value is the same
+    }
+    // Order by published date, newest first
+    $sqlOrderBy = "ORDER BY vl.publishedAt DESC";
+
+    // Limit/Offset
+    $sqlLimitOffset = "LIMIT :limit OFFSET :offset";
+
+    // Combine SQL parts
+    $sql = $sqlBaseSelect . " " . $sqlBaseFrom . " " . $sqlBaseWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy . " " . $sqlLimitOffset;
+    // --- END: Dynamic SQL Building ---
 
     $stmt = $pdo->prepare($sql);
 
-    // Bind creator names (string type)
-    foreach ($creators as $key => $creator) {
-        $stmt->bindValue($key + 1, $creator, PDO::PARAM_STR);
+    // Bind IN list parameters (creators)
+    $paramIndex = 1; // Start parameter index at 1
+    foreach ($creators as $creator) {
+        $stmt->bindValue($paramIndex++, $creator, PDO::PARAM_STR);
     }
-    // Bind creator count, limit and offset (integer type)
+
+    // Bind HAVING parameter(s)
     $stmt->bindValue(':creator_count', $creator_count, PDO::PARAM_INT);
+    // if ($filter_exclusive_cast === 1) { // Bind only if needed? Or always bind 0/1? Let's bind always for simplicity if using placeholder approach.
+    //    $stmt->bindValue(':filter_exclusive_cast', $filter_exclusive_cast, PDO::PARAM_INT);
+    // }
+    // --> Binding filter_exclusive_cast not needed with the SQL structure chosen above
+
+    // Bind Filter parameters
+    foreach ($filterParams as $placeholder => $value) {
+        $stmt->bindValue($placeholder, $value, PDO::PARAM_STR);
+    }
+
+    // Bind Limit/Offset
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 
@@ -31,34 +158,88 @@ function getVideosByCreators(PDO $pdo, array $creators, int $page = 1, int $limi
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function countTotalVideosByCreators(PDO $pdo, array $creators): int { // Function to count total results
+
+function countTotalVideosByCreators(PDO $pdo, array $creators, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0): int {
 
     $creator_list = str_repeat('?, ', count($creators) - 1) . '?';
     $creator_count = count($creators);
 
-    // SQL to count the total number of videos (using a subquery for correctness with GROUP BY/HAVING)
-    $sql = "SELECT COUNT(*) FROM (
-                SELECT vl.VideoID
-                FROM VideoList vl
-                INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
-                INNER JOIN CastList cl ON cl.CastID = vc.CastID
-                WHERE cl.CastName IN ($creator_list)
-                GROUP BY vl.VideoID
-                HAVING COUNT(*) = :creator_count
-            ) AS TotalCount";
+    // --- START: Dynamic SQL Building for Count ---
+    $sqlInnerSelect = "SELECT vl.VideoID"; // Select ID for grouping
+    $sqlBaseFrom = "FROM VideoList vl
+                    INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
+                    INNER JOIN CastList cl ON cl.CastID = vc.CastID";
+    $sqlBaseWhere = "WHERE cl.CastName IN ($creator_list)";
+
+    $sqlConditions = ""; // Additional WHERE conditions
+    $filterParams = []; // Parameters for WHERE/HAVING filters
+
+    // Channel Filter
+    if (!empty($filter_channel)) {
+        $sqlConditions .= " AND vl.channelName = :channelName"; 
+        $filterParams[':channelName'] = $filter_channel;       
+    }
+    // Title Filter
+    if (!empty($filter_title)) {
+        $sqlConditions .= " AND vl.Title LIKE :titleSearch";
+        $filterParams[':titleSearch'] = '%' . $filter_title . '%';
+    }
+    // Date Start Filter
+    if (!empty($filter_date_start)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) >= :dateStart";
+        $filterParams[':dateStart'] = $filter_date_start;
+    }
+    // Date End Filter
+    if (!empty($filter_date_end)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) <= :dateEnd";
+        $filterParams[':dateEnd'] = $filter_date_end;
+    }
+    // --- > NEW: Exclude Live Filter <---
+    if ($filter_exclude_live === 1) {
+        $sqlConditions .= " AND vl.wasLive = 0";
+    }
+
+    // Grouping
+    $sqlGroupBy = "GROUP BY vl.VideoID";
+
+    // --- > REVISED: Having Clause <---
+    $sqlHaving = "HAVING COUNT(DISTINCT cl.CastID) = :creator_count"; // Ensure all selected are present
+    if ($filter_exclusive_cast === 1) {
+        // If exclusive is checked, add condition for total cast count
+        $sqlHaving .= " AND (SELECT COUNT(vc_total.CastID) FROM VideoCast vc_total WHERE vc_total.VideoID = vl.VideoID) = :creator_count";
+    }
+    // $filterParams[':filter_exclusive_cast'] = $filter_exclusive_cast; // Not needed
+
+    // Combine parts for inner query
+    $innerSql = $sqlInnerSelect . " " . $sqlBaseFrom . " " . $sqlBaseWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving;
+
+    // Wrap in COUNT(*)
+    $sql = "SELECT COUNT(*) FROM (" . $innerSql . ") AS TotalCount";
+    // --- END: Dynamic SQL Building for Count ---
 
     $stmt = $pdo->prepare($sql);
 
-    // Bind creator names (string type)
-    foreach ($creators as $key => $creator) {
-        $stmt->bindValue($key + 1, $creator, PDO::PARAM_STR);
+    // Bind IN list parameters (creators)
+    $paramIndex = 1;
+    foreach ($creators as $creator) {
+        $stmt->bindValue($paramIndex++, $creator, PDO::PARAM_STR);
     }
-    // Bind creator count (integer type)
-     $stmt->bindValue(':creator_count', $creator_count, PDO::PARAM_INT);
+
+    // Bind HAVING parameter(s)
+    $stmt->bindValue(':creator_count', $creator_count, PDO::PARAM_INT);
+    // if ($filter_exclusive_cast === 1) {
+    //    $stmt->bindValue(':filter_exclusive_cast', $filter_exclusive_cast, PDO::PARAM_INT);
+    // } // Not needed
+
+    // Bind Filter parameters
+    foreach ($filterParams as $placeholder => $value) {
+        $stmt->bindValue($placeholder, $value, PDO::PARAM_STR);
+    }
 
     $stmt->execute();
-    return (int)$stmt->fetchColumn(); // Fetch the single count value
+    return (int)$stmt->fetchColumn();
 }
+
 
 function insertreport($pdo,array $data) { // Report function input
 
@@ -141,6 +322,20 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $creators = array_map('htmlspecialchars', $_GET['iid']);
 
+        // Retrieve filters from SESSION for this GET request
+        $filter_channel = $_SESSION['search_filter_channel'] ?? '';
+        $filter_title = $_SESSION['search_filter_title'] ?? '';
+        $filter_date_start = $_SESSION['search_filter_date_start'] ?? '';
+        $filter_date_end = $_SESSION['search_filter_date_end'] ?? '';
+        $filter_exclude_live = $_SESSION['search_filter_exclude_live'] ?? 0;
+        $filter_exclusive_cast = $_SESSION['search_filter_exclusive_cast'] ?? 0;
+
+        // Get the current page number from URL, default to 1
+        $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Keep this simple
+        if ($current_page < 1) {
+            $current_page = 1;
+        }
+
         // Build base query string for pagination links (excluding page param)
         $query_params = [];
         foreach ($creators as $c) {
@@ -151,15 +346,8 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
              $urlrep = implode("&iid%5B%5D=", $creators); // Keep original urlrep logic if needed elsewhere
         }
 
-
-        // Get the current page number from URL, default to 1
-        $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        if ($current_page < 1) {
-            $current_page = 1; 
-        }
-
         // Get the total count of videos FIRST
-        $total_videos = countTotalVideosByCreators($pdo, $creators); 
+        $total_videos = countTotalVideosByCreators($pdo, $creators, $filter_channel, $filter_title, $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast); 
 
         if ($total_videos > 0) {
             $total_pages = (int)ceil($total_videos / $results_per_page);
@@ -170,7 +358,7 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
             }
 
              // Fetch only the videos for the current page
-            $videos = getVideosByCreators($pdo, $creators, $current_page, $results_per_page); 
+             $videos = getVideosByCreators($pdo, $creators, $current_page, $results_per_page, $filter_channel, $filter_title, $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast); 
         } else {
              // No videos found, reset pages
              $total_pages = 0;

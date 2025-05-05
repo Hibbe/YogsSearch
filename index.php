@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<?php require_once 'config.php'; $sortedChannelHandles = $castWhiteList;?>
 <html lang="en">
     <head>
         <title>Yogsearch | Find new videos featuring your favourite creators</title>
@@ -21,7 +22,7 @@
         </header>
         <main>
             <section class="noselect"> <!-- Search selector -->
-                <form action="search.php">
+                <form action="search.php" method="POST">
                     <!--#region castmembers-->
                     <input type="checkbox" class="hiddencb" id="Lewis"      name="iid[]" value="Lewis">          <label for="Lewis"      class="castcb Lewis">Lewis</label>
                     <input type="checkbox" class="hiddencb" id="Simon"      name="iid[]" value="Simon">          <label for="Simon"      class="castcb Simon">Simon</label>
@@ -70,6 +71,50 @@
                     <label for="ExclusiveCast">Exclusive</label> -->
                     
                 </p>
+                <details class="filter-details" style="margin: 20px auto; max-width: 600px;">
+                <summary class="filter-summary">Optional Filters</summary>
+                    <div style="margin-top: 15px; margin-bottom: 15px;"> <label for="filter_channel" style="display: block; margin-bottom: 5px;">Filter by Channel:</label>
+                        <select name="filter_channel" id="filter_channel" style="padding: 5px; border-radius: 4px; background-color:#232a88; color:white; border: 1px solid #091057;">
+                            <option value="">-- Any Channel --</option>
+                            <?php
+                                // --- Loop through defined channels ---
+                                foreach ($sortedChannelHandles as $handle) {
+                                    echo '<option value="' . htmlspecialchars($handle) . '">' 
+                                       . htmlspecialchars($handle)                          
+                                       . '</option>';
+                                }
+                                // --- End Loop ---
+                            ?>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label for="filter_title" style="display: block; margin-bottom: 5px;">Title Contains:</label>
+                        <input type="text" name="filter_title" id="filter_title" placeholder="e.g., TTT, Minecraft" style="padding: 5px; border-radius: 4px; background-color:#232a88; color:white; border: 1px solid #091057; width: 80%; max-width: 250px;">
+                    </div>
+
+                    <div class="date-range-container">
+                        <label class="date-range-label">Published Date Range:</label>
+                        <div class="date-inputs-wrapper">
+                            <div class="date-input-group">
+                                <label for="filter_date_start" class="date-label">From:</label>
+                                <input type="date" name="filter_date_start" id="filter_date_start" class="date-input">
+                            </div>
+                            <span class="date-separator" aria-hidden="true">–</span> <div class="date-input-group">
+                                <label for="filter_date_end" class="date-label">To:</label>
+                                <input type="date" name="filter_date_end" id="filter_date_end" class="date-input">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center;"> 
+                        <div class="filter-toggle-container" style="margin-bottom: 10px;"> <input type="checkbox" class="filter-toggle-input" name="filter_exclude_live" value="1" id="filter_exclude_live">
+                            <label class="filter-toggle-label" for="filter_exclude_live">Exclude Livestreams / VODs</label>
+                        </div>
+                        <div class="filter-toggle-container"> <input type="checkbox" class="filter-toggle-input" name="filter_exclusive_cast" value="1" id="filter_exclusive_cast">
+                            <label class="filter-toggle-label tooltip-trigger" for="filter_exclusive_cast" data-tooltip="Show videos featuring ONLY the selected creators">No Extras!</label>
+                        </div>
+                    </div>
+                </details>
                 <p> <!-- Here goes the search button -->
                     <input type="submit" id="Searchsubmit" value="Search" />
                 </p>

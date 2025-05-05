@@ -173,6 +173,236 @@ input[type=url] {
 
 .Wilsonator {text-indent: -10px;} /* Long name; lazy fix */
 
+/* #region Collapsible Filter Section */
+
+.filter-details {
+  /* Style like the old fieldset */
+  border: 1px solid #232a88;
+  border-radius: 15px;
+  padding: 10px 15px 15px 15px; /* Adjusted padding (less top initially) */
+  background-color: transparent; /* Or a subtle background */
+  overflow: hidden; /* Helps contain content */
+}
+
+.filter-summary {
+  /* Style like the old legend */
+  display: block; /* Make it block level for better layout control */
+  border: none;
+  padding: 8px 12px;
+  margin: -10px -15px 0 -15px; /* Negative margin to touch edges */
+  color: #ffffff;
+  background-color: #232a88; /* Use card blue for summary background */
+  font-weight: bold;
+  border-radius: 14px 14px 0 0; /* Round top corners */
+  cursor: pointer;
+  outline: none; /* Remove default focus outline */
+  user-select: none; /* Prevent text selection */
+  transition: background-color 0.2s; /* Smooth hover */
+}
+
+.filter-summary:hover {
+    background-color: #2c349e; /* Slightly lighter blue on hover */
+}
+
+/* Hide the default triangle marker */
+.filter-summary {
+  list-style: none; /* For Firefox */
+}
+.filter-summary::-webkit-details-marker {
+  display: none; /* For Chrome/Safari */
+}
+
+/* Add a custom marker (e.g., arrow) */
+.filter-summary::before {
+  content: '► '; /* Closed state: right-pointing triangle */
+  color: #EC8305; /* Orange marker */
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Rotate the marker when the details element is open */
+.filter-details[open] > .filter-summary::before {
+  transform: rotate(90deg);
+}
+
+/* Add space below summary ONLY when details is open */
+.filter-details[open] > .filter-summary {
+   margin-bottom: 15px; /* Space between summary and content */
+   border-radius: 14px; /* Optional: make summary fully rounded when open */
+}
+
+/* --- Date Range Filter Styling --- */
+.date-range-container {
+  text-align: center;    /* Center the main label and input wrapper */
+  margin-bottom: 20px; /* Spacing below the date section */
+}
+
+.date-range-label {
+  display: block;        /* Make label take its own line */
+  margin-bottom: 8px;
+  color: #ffffff;       /* Orange main label */
+  font-size: 1em;        /* Adjust size as needed */
+}
+
+.date-inputs-wrapper {
+  display: inline-flex;  /* Use inline-flex to allow centering */
+  align-items: flex-end; /* Align items based on their bottom edge */
+  gap: 8px;              /* Space between From/Separator/To sections */
+  flex-wrap: wrap;         /* Allow wrapping on smaller screens */
+  justify-content: center; /* Center items if they wrap */
+}
+
+.date-input-group {
+  text-align: left;      /* Align label/input left within their group */
+}
+
+.date-label {
+  display: block;
+  font-size: 0.85em;
+  color: #cccccc;       /* Lighter text for "From" / "To" */
+  margin-bottom: 3px;
+}
+
+.date-input {
+  /* Style like other filter inputs */
+  padding: 6px 8px;
+  border-radius: 4px;
+  background-color: #232a88; /* Card blue background */
+  color: white;
+  border: 1px solid #161D70; /* Darker blue border */
+  color-scheme: dark;      /* Hint for dark mode date picker */
+  /* width: auto; */      /* Let browser size, or set a specific width: */
+   width: 145px;
+}
+
+/* Style the browser's date picker icon (WebKit browsers) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+   background-color: #cccccc; /* Use a light color for the icon */
+   padding: 2px;
+   margin-left: 4px;
+   border-radius: 2px;
+   cursor: pointer;
+   opacity: 0.8;
+   transition: opacity 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Style for the optional separator */
+.date-separator {
+  color: #cccccc;
+  font-size: 1.1em;
+  padding-bottom: 5px; /* Align vertically with inputs */
+  user-select: none;
+}
+
+/* --- Toggle Button Styles for Filters --- */
+
+.filter-toggle-container {
+  display: block; /* Make containers block level */
+  text-align: center; /* Ensure labels inside are centered if needed */
+  margin-bottom: 10px; /* Space below each toggle */
+}
+
+.filter-toggle-input {
+  /* Hide the actual checkbox visually but keep it accessible */
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.filter-toggle-label {
+  /* Style the label as a button */
+  display: inline-block; /* Allow padding and centering */
+  padding: 6px 18px; /* Adjust padding */
+  border-radius: 50px; /* Pill shape */
+  background-color: #232a88; /* Default state: Card blue background */
+  color: #cccccc; /* Default state: Light grey text */
+  border: 1px solid #161D70; /* Default state: Darker blue border */
+  cursor: pointer;
+  user-select: none; /* Prevent text selection */
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s; /* Smooth transition */
+  font-size: 0.9em; /* Slightly smaller font */
+  font-weight: 500;
+}
+
+.filter-toggle-label:hover {
+  /* Hover state (when unchecked) */
+  background-color: #2c349e; /* Lighter blue */
+  border-color: #373d92;
+  color: #ffffff; /* White text on hover */
+}
+
+/* Styles for the label when its preceding checkbox is CHECKED */
+.filter-toggle-input:checked + .filter-toggle-label {
+  background-color: #EC8305; /* Checked state: Orange background */
+  color: #091057; /* Checked state: Dark blue text */
+  border-color: #be6b05; /* Checked state: Darker orange border */
+  font-weight: bold;
+}
+
+.filter-toggle-input:checked + .filter-toggle-label:hover {
+    background-color: rgb(255, 171, 45); /* Lighter orange on hover when checked */
+    border-color: #EC8305;
+    color: #091057;
+}
+
+/* Optional: Add focus styles for keyboard navigation */
+.filter-toggle-input:focus + .filter-toggle-label {
+    box-shadow: 0 0 0 2px #091057, 0 0 0 4px #EC8305; /* Example focus outline */
+}
+
+/* Add position relative to the element that will trigger the tooltip */
+.tooltip-trigger {
+  position: relative;
+  /* border-bottom: 1px dotted #ccc; /* Optional: subtle indicator */
+  /* cursor: help; /* Optional: change cursor */
+}
+
+/* Tooltip pseudo-element ::after */
+.tooltip-trigger::after {
+  content: attr(data-tooltip); /* Display the content of the data-tooltip attribute */
+
+  /* Positioning */
+  position: absolute;
+  bottom: 115%; /* Position above the label */
+  left: 50%;    /* Center horizontally */
+  transform: translateX(-50%); /* Fine-tune centering */
+
+  /* Appearance */
+  background-color: #161D70; /* Dark blue background (like report card) */
+  color: #ffffff;          /* White text */
+  padding: 6px 12px;       /* Padding inside the tooltip */
+  border-radius: 5px;      /* Slightly rounded corners */
+  font-size: 0.9em;        /* Slightly smaller font */
+  font-weight: normal;     /* Reset font weight */
+  white-space: nowrap;     /* Prevent tooltip text from wrapping */
+  z-index: 10;             /* Ensure tooltip is above other elements */
+
+  /* Visibility & Animation */
+  opacity: 0;              /* Hidden by default */
+  visibility: hidden;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+  /* Add a delay before tooltip appears */
+  transition-delay: 0s; /* Initially no delay */
+}
+
+/* Show the tooltip on hover */
+.tooltip-trigger:hover::after {
+  opacity: 1;
+  visibility: visible;
+  /* Delay when hovering */
+  transition-delay: 0.4s; /* Wait 0.4s before showing */
+}
+
+/* #endregion */
+
+
+
 /* #region Search cards */
 .searchresults {display:block; padding-bottom: 20px;} /* Search cards frame; Adds 20px between last card and footer/next element */
 .card
