@@ -459,9 +459,6 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
             <img width="800" height="289" src="yogsearch.webp" alt="Yogsearch logo" class="yogart">
         </header>
         <main>
-        <?php // --- Pagination Links ---
-            // Show nav container if a search was done (e.g., creators selected)
-            if (!empty($creators)): ?>
             <nav class="pagination">
                 <ul>
                     <?php // Previous Page Link (Shows "Back to Search" on Page 1)
@@ -483,15 +480,13 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
                         <?php endif; // End of inner if/else for Next link content ?>
 
                     <?php endif; // End of wrapper condition for showing Next button block ?>
-
                 </ul>
             </nav>
-        <?php endif; // End of outer condition: if (!empty($creators)) ?>
         <?php // Display messages or results
                         if (empty($creators) && !($_SERVER['REQUEST_METHOD'] == 'POST')) { // Show message only if not a POST result
                             echo "<p>Please select between 1 and 12 creators using the search on the main page.</p>";
                         } elseif (!empty($creators) && $total_videos === 0) { // Check creators is not empty before saying no videos found
-                            echo "<p>No videos found matching the selected creators.</p>";
+                            echo "<p>No videos found matching the selected creators.</p>"; // CHECKPOINT -- add cool image here, diggy hole. 
                         } elseif ($total_videos > 0) {
                             // Display the total count and page info
                             echo "<p>Found $total_videos results. Showing page $current_page of $total_pages.</p>";
