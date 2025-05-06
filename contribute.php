@@ -154,8 +154,8 @@ if ($isSubmit && $isBan && $currentServedVideoId) {
         $pdo->beginTransaction();
 
         // 1. Update bannedBool in VideoList
-        $stmtUpdateBan = $pdo->prepare("UPDATE VideoList SET bannedBool = 1 WHERE VideoID = ?");
-        $stmtUpdateBan->execute([$currentServedVideoId]);
+        //$stmtUpdateBan = $pdo->prepare("UPDATE VideoList SET bannedBool = 1 WHERE VideoID = ?");
+        //$stmtUpdateBan->execute([$currentServedVideoId]);
 
         // 2. Insert into VideoCast with CastID 42 (Banned)
         // Check if a record for this VideoID already exists to avoid duplicates if desired,
