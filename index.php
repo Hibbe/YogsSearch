@@ -30,12 +30,12 @@
                     <input type="checkbox" class="hiddencb" id="Duncan"     name="iid[]" value="Duncan">         <label for="Duncan"     class="castcb Duncan">Duncan</label>
                     <input type="checkbox" class="hiddencb" id="Rythian"    name="iid[]" value="Rythian">        <label for="Rythian"    class="castcb Rythian">Rythian</label>
                     <input type="checkbox" class="hiddencb" id="Ben"        name="iid[]" value="Ben">            <label for="Ben"        class="castcb Ben">Ben</label>
-                    <input type="checkbox" class="hiddencb" id="Angor"      name="iid[]" value="Angor">          <label for="Angor"      class="castcb Tom">Tom</label>
+                    <input type="checkbox" class="hiddencb" id="Angor"      name="iid[]" value="Tom">            <label for="Angor"      class="castcb Tom">Tom</label>
                     <input type="checkbox" class="hiddencb" id="Zylus"      name="iid[]" value="Zylus">          <label for="Zylus"      class="castcb Zylus">Zylus</label>
                     <input type="checkbox" class="hiddencb" id="Zoey"       name="iid[]" value="Zoey">           <label for="Zoey"       class="castcb Zoey">Zoey</label>
                     <input type="checkbox" class="hiddencb" id="Nilesy"     name="iid[]" value="Nilesy">         <label for="Nilesy"     class="castcb Nilesy">Nilesy</label> <!-- 10 -->
                     <input type="checkbox" class="hiddencb" id="Ravs"       name="iid[]" value="Ravs">           <label for="Ravs"       class="castcb Ravs">Ravs</label>
-                    <input type="checkbox" class="hiddencb" id="Barry"      name="iid[]" value="Barry">          <label for="Barry"      class="castcb Harry">Harry</label>
+                    <input type="checkbox" class="hiddencb" id="Barry"      name="iid[]" value="Harry">          <label for="Barry"      class="castcb Harry">Harry</label>
                     <input type="checkbox" class="hiddencb" id="Lydia"      name="iid[]" value="Lydia">          <label for="Lydia"      class="castcb Lydia">Lydia</label>
                     <input type="checkbox" class="hiddencb" id="Bouphe"     name="iid[]" value="Bouphe">         <label for="Bouphe"     class="castcb Bouphe">Bouphe</label>
                     <input type="checkbox" class="hiddencb" id="Osie"       name="iid[]" value="Osie">           <label for="Osie"       class="castcb Osie">Osie</label>
