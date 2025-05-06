@@ -89,9 +89,32 @@ function getNextVideoId($pdo, $filters = []) {
 
 // --- PRG Pattern: Handle POST Request ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // --- Rate Limiting Check (Part 1) ---
+    $minimumSubmissionInterval = 4; // seconds
+    $submissionRateLimitApplies = false; // Flag to indicate if this POST action type should be rate-limited
+
+    // Determine if the current action is a "submit cast to video" action
+    // This means 'submit_action' is set, AND it's NOT a ban action.
+    if (isset($_POST['submit_action'])) {
+        $submissionRateLimitApplies = true;
+    }
+
+    if ($submissionRateLimitApplies && isset($_SESSION['last_submission_time'])) {
+        $timeSinceLastSubmission = time() - $_SESSION['last_submission_time'];
+        if ($timeSinceLastSubmission < $minimumSubmissionInterval) {
+            $_SESSION['flash_message'] = [
+                'type' => 'error',
+                'text' => 'Please wait a few seconds between submissions.'
+            ];
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+    }
+
     if (!isset($_SESSION['skipped_videos'])) {
         $_SESSION['skipped_videos'] = [];
     }
+
 
     // Store filter selections in session
     $_SESSION['filter_channelId'] = $_POST['filter_channel'] ?? '';
@@ -126,6 +149,7 @@ $isBan = isset($_POST['ban_video']) && $_POST['ban_video'] == '1'; // Check if b
 
 // Action 1: Ban Video (if Submit was clicked AND Ban checkbox is checked)
 if ($isSubmit && $isBan && $currentServedVideoId) {
+    $_SESSION['last_submission_time'] = time();
     try {
         $pdo->beginTransaction();
 
@@ -142,7 +166,7 @@ if ($isSubmit && $isBan && $currentServedVideoId) {
         $stmtInsertBanCast->execute([$currentServedVideoId]);
 
         $pdo->commit();
-        $_SESSION['flash_message'] = ['type' => 'warning', 'text' => 'Video marked as banned and associated with "Banned" cast.'];
+        $_SESSION['flash_message'] = ['type' => 'warning', 'text' => 'Video marked as banned and associated with forbidden cast.'];
 
     } catch (\PDOException $e) {
         $pdo->rollBack();
@@ -155,7 +179,7 @@ if ($isSubmit && $isBan && $currentServedVideoId) {
 }
 // Action 2: Standard Submit (if Submit was clicked, Ban is NOT checked)
 else if ($isSubmit && !$isBan && $currentServedVideoId) {
-    // This is the original submission logic block
+    $_SESSION['last_submission_time'] = time();
     if (!empty($selectedCastNames)) { // Check if cast members were selected
         try {
             $pdo->beginTransaction();
