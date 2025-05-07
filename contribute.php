@@ -39,52 +39,93 @@ foreach ($allChannels as $channel) {
 
 // --- Function to Get Next Video ---
 function getNextVideoId($pdo, $filters = []) {
-    $sql = "SELECT vl.YoutubeID, vl.VideoID, vl.Title
-            FROM VideoList vl
-            LEFT JOIN VideoCast vc ON vl.VideoID = vc.VideoID
-            WHERE vc.VideoID IS NULL"; // Base condition: not in VideoCast
+    // Columns to be finally selected by the main query
+    $finalSelectColumns = "vl.YoutubeID, vl.VideoID, vl.Title";
 
-    $params = [];
+    // Base parts of the query
+    $fromClause = " FROM VideoList vl LEFT JOIN VideoCast vc ON vl.VideoID = vc.VideoID";
+    
+    // Base WHERE conditions (video not in VideoCast)
+    $baseWhereConditions = ["vc.VideoID IS NULL"];
+    $params = []; // For SQL parameters
 
-    // Exclude skipped videos
+    // Condition 1: Exclude skipped videos (applies in all cases)
     if (!empty($_SESSION['skipped_videos'])) {
+        // Create placeholders for each skipped video ID
         $skippedPlaceholders = implode(',', array_fill(0, count($_SESSION['skipped_videos']), '?'));
-        $sql .= " AND vl.YoutubeID NOT IN ($skippedPlaceholders)";
+        $baseWhereConditions[] = "vl.YoutubeID NOT IN ($skippedPlaceholders)";
+        // Add skipped video IDs to the parameters array
         $params = array_merge($params, $_SESSION['skipped_videos']);
     }
 
-    // Apply Channel Filter
-    if (!empty($filters['channelId'])) {
-         $sql .= " AND vl.channelId = ?";
-         $params[] = $filters['channelId'];
+    // Determine if any filters are currently active
+    $areFiltersActive = !empty($filters['channelId']) ||
+                        !empty($filters['titleSearch']) ||
+                        !empty($filters['dateStart']) ||
+                        !empty($filters['dateEnd']);
+
+    if ($areFiltersActive) {
+        // --- Logic for when filters ARE active ---
+        $filterWhereConditions = []; // To hold conditions specific to active filters
+        
+        if (!empty($filters['channelId'])) {
+            $filterWhereConditions[] = "vl.channelId = ?";
+            $params[] = $filters['channelId'];
+        }
+        if (!empty($filters['titleSearch'])) {
+            $filterWhereConditions[] = "vl.Title LIKE ?";
+            $params[] = '%' . $filters['titleSearch'] . '%'; // Add wildcards for LIKE search
+        }
+        if (!empty($filters['dateStart'])) {
+            $filterWhereConditions[] = "DATE(vl.publishedAt) >= ?";
+            $params[] = $filters['dateStart'];
+        }
+        if (!empty($filters['dateEnd'])) {
+            $filterWhereConditions[] = "DATE(vl.publishedAt) <= ?";
+            $params[] = $filters['dateEnd'];
+        }
+        
+        // Combine base conditions with filter conditions
+        $allWhereConditions = array_merge($baseWhereConditions, $filterWhereConditions);
+        
+        // Construct the SQL query: select latest video matching all conditions
+        $sql = "SELECT " . $finalSelectColumns
+             . $fromClause
+             . " WHERE " . implode(" AND ", $allWhereConditions)
+             . " ORDER BY vl.publishedAt DESC LIMIT 1";
+
+    } else {
+        // --- Logic for when filters are NOT active ---
+        // Fetch 1 random video from the latest 100 eligible videos
+        
+        // Construct the WHERE clause for the inner query (base conditions only)
+        $innerWhereClause = " WHERE " . implode(" AND ", $baseWhereConditions);
+
+        // Subquery to get the latest 100 eligible videos.
+        // It must select the columns needed by the outer query, plus 'publishedAt' for ordering.
+        $subQuerySelectColumns = "vl.YoutubeID, vl.VideoID, vl.Title, vl.publishedAt";
+        $subQuery = "SELECT " . $subQuerySelectColumns
+                  . $fromClause // FROM VideoList vl LEFT JOIN VideoCast vc ...
+                  . $innerWhereClause // WHERE vc.VideoID IS NULL AND (skipped video conditions)
+                  . " ORDER BY vl.publishedAt DESC LIMIT 100";
+
+        // Outer query selects the desired columns from the subquery's results (aliased as 't')
+        // and then picks one randomly.
+        $outerSelectColumns = "t.YoutubeID, t.VideoID, t.Title";
+        $sql = "SELECT " . $outerSelectColumns
+             . " FROM (" . $subQuery . ") AS t"  // 't' is the alias for the subquery result set
+             . " ORDER BY RANDOM() LIMIT 1";     // RANDOM() is SQLite specific for random ordering
+        
+        // The $params array already contains parameters for skipped videos,
+        // which are used in $innerWhereClause of the $subQuery.
     }
 
-    // Apply Title Filter
-    if (!empty($filters['titleSearch'])) {
-        $sql .= " AND vl.Title LIKE ?";
-        $params[] = '%' . $filters['titleSearch'] . '%';
-    }
-
-    // Apply Date Range Filter
-    // Assuming publishedAt is stored in a format SQLite can compare directly
-    // like 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS' or ISO8601 'YYYY-MM-DDTHH:MM:SSZ'
-    if (!empty($filters['dateStart'])) {
-        // Compare DATE part of publishedAt with start date input
-        $sql .= " AND DATE(vl.publishedAt) >= ?"; // Use DATE()
-        $params[] = $filters['dateStart']; // Input is 'YYYY-MM-DD'
-    }
-     if (!empty($filters['dateEnd'])) {
-        // Compare DATE part of publishedAt with end date input
-        $sql .= " AND DATE(vl.publishedAt) <= ?"; // Use DATE()
-        $params[] = $filters['dateEnd'];   // Input is 'YYYY-MM-DD'
-     }
-
-    // Order by most recent (within filters) and get one
-    $sql .= " ORDER BY vl.publishedAt DESC LIMIT 1";
-
+    // Prepare and execute the statement
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    return $stmt->fetch();
+    
+    // Fetch the result (PDO::FETCH_ASSOC is likely your default but good to be explicit if needed)
+    return $stmt->fetch(PDO::FETCH_ASSOC); 
 }
 
 // --- PRG Pattern: Handle POST Request ---
