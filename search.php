@@ -465,7 +465,7 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
                         if ($current_page > 1): ?>
                         <li><a href="?<?= htmlspecialchars($base_query_string); ?>&page=<?= $current_page - 1; ?><?= isset($_GET['repid']) ? '&repid='.urlencode($_GET['repid']) : ''; ?>">« Previous</a></li>
                     <?php else: // When current_page is 1 ?>
-                        <li><a href="/index.php">« Back to Search</a></li>
+                        <li><a href="/">« Back to search</a></li>
                     <?php endif; ?>
 
 
@@ -536,7 +536,7 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
                             if ($current_page > 1): ?>
                             <li><a href="?<?= htmlspecialchars($base_query_string); ?>&page=<?= $current_page - 1; ?><?= isset($_GET['repid']) ? '&repid='.urlencode($_GET['repid']) : ''; ?>">« Previous</a></li>
                         <?php else: // When current_page is 1 ?>
-                            <li><a href="/index.php">« Back to Search</a></li>
+                            <li><a href="/">« Back to search</a></li>
                         <?php endif; ?>
 
 
@@ -557,7 +557,7 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
             <?php endif; // End of outer condition: if (!empty($creators)) ?>
         </main>
         <footer>
-            <a href='/faq.php' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/contribute.php' class=folinks>Contribute</a>
+            <a href='/faq' class=folinks>About</a> | <a href='https://github.com/Hibbe/YogsSearch' class=folinks target="_blank">Github</a> | <a href='/contribute' class=folinks>Contribute</a>
             <p class="fodisc">Yogsearch is a <strong>fanpage</strong> and is <strong>not associated with or endorsed</strong> by the Yogscast</p>
         </footer>
     </body>
