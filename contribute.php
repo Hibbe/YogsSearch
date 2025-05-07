@@ -1017,26 +1017,38 @@ unset($_SESSION['flash_message']);
         }
 
         function setFilterVisibilityBasedOnFit() {
-            // Ensure the details element is open to accurately measure its effect on the document's scroll height.
-            // It starts closed from HTML, so we open it for the check.
+            const activeElement = document.activeElement;
+            // Define the IDs of your filter input elements
+            const filterInputIds = ['filter_channel', 'filter_title', 'filter_date_start', 'filter_date_end'];
+            const isFilterInputFocused = filterInputIds.some(id => activeElement && activeElement.id === id);
+
+            // If a filter input is focused AND the filter details are currently open,
+            // it's likely the resize event is due to the virtual keyboard.
+            // In this case, we prevent the function from closing the details.
+            if (isFilterInputFocused && filterDetails.open) {
+                // console.log('Filter input focused and details open, preventing auto-close on this resize.');
+                return; // Exit early, leaving the filter details open
+            }
+
+            // Original logic to determine if filter should be open or closed based on content fit.
+            // Programmatically open the filterDetails to accurately measure its content's
+            // impact on the document's total scrollHeight.
             filterDetails.open = true;
 
-            // Use requestAnimationFrame to wait for the browser to reflow and apply the 'open' state
-            // before we measure the scrollHeight.
             requestAnimationFrame(function() {
                 const documentScrollHeight = document.documentElement.scrollHeight;
-                const viewportHeight = window.innerHeight; // Gets the viewport height
+                const viewportHeight = window.innerHeight;
 
                 if (documentScrollHeight > viewportHeight) {
-                    // If the document's total height is greater than the viewport's height,
-                    // it means a scrollbar is present (or would be needed).
-                    // In this case, we close the filter details section.
+                    // If the document's total height (with the filter section open)
+                    // is greater than the viewport's height, it means a scrollbar
+                    // is present (or would be needed). So, close the filter details section.
                     filterDetails.open = false;
-                    // console.log('Filter automatically closed as it would cause a scrollbar.');
+                    // console.log('Content overflows, filter automatically closed.');
                 } else {
-                    // The document fits within the viewport even with the filter open.
-                    // filterDetails.open = true; // It's already open from our programmatic change, so this line is more for clarity.
-                    // console.log('Filter automatically opened as it fits on the page.');
+                    // The document fits within the viewport even with the filter section open.
+                    // filterDetails.open was already set to true for measurement, so it remains open.
+                    // console.log('Content fits, filter automatically opened/kept open.');
                 }
             });
         }
