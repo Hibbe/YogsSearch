@@ -158,7 +158,6 @@ function getVideosByCreators(PDO $pdo, array $creators, int $page = 1, int $limi
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-
 function countTotalVideosByCreators(PDO $pdo, array $creators, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0): int {
 
     $creator_list = str_repeat('?, ', count($creators) - 1) . '?';
@@ -240,6 +239,90 @@ function countTotalVideosByCreators(PDO $pdo, array $creators, string $filter_ch
     return (int)$stmt->fetchColumn();
 }
 
+function getAllMatchingVideoIds(PDO $pdo, array $creators, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0): array {
+    $creator_list_placeholders = '';
+    if (!empty($creators)) {
+        $creator_list_placeholders = str_repeat('?, ', count($creators) - 1) . '?';
+    }
+    $creator_count = count($creators);
+
+    // Base SQL parts
+    $sqlSelect = "SELECT vl.YoutubeID";
+    $sqlFrom = "FROM VideoList vl";
+    $sqlJoins = "";
+    $sqlWhere = "WHERE 1=1"; // Start with a true condition to easily append filters
+    $sqlGroupBy = "";
+    $sqlHaving = "";
+    $sqlOrderBy = "ORDER BY vl.publishedAt DESC"; // Consistent ordering
+
+    $filterParams = []; // Parameters for WHERE/HAVING filters
+
+    // If creators are selected, add joins and specific where/having clauses
+    if (!empty($creators)) {
+        $sqlJoins = " INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
+                      INNER JOIN CastList cl ON cl.CastID = vc.CastID";
+        $sqlWhere = " WHERE cl.CastName IN ($creator_list_placeholders)"; // Note: This replaces "WHERE 1=1"
+        $sqlGroupBy = " GROUP BY vl.VideoID, vl.YoutubeID"; // Group by VideoID (and YoutubeID as it's selected)
+        $sqlHaving = " HAVING COUNT(DISTINCT cl.CastID) = :creator_count";
+        if ($filter_exclusive_cast === 1) {
+            $sqlHaving .= " AND (SELECT COUNT(vc_total.CastID) FROM VideoCast vc_total WHERE vc_total.VideoID = vl.VideoID) = :creator_count";
+        }
+    }
+
+    $sqlConditions = ""; // Additional WHERE conditions for filters
+
+    // Channel Filter
+    if (!empty($filter_channel)) {
+        $sqlConditions .= " AND vl.channelName = :channelName";
+        $filterParams[':channelName'] = $filter_channel;
+    }
+    // Title Filter
+    if (!empty($filter_title)) {
+        $sqlConditions .= " AND vl.Title LIKE :titleSearch";
+        $filterParams[':titleSearch'] = '%' . $filter_title . '%';
+    }
+    // Date Start Filter
+    if (!empty($filter_date_start)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) >= :dateStart";
+        $filterParams[':dateStart'] = $filter_date_start;
+    }
+    // Date End Filter
+    if (!empty($filter_date_end)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) <= :dateEnd";
+        $filterParams[':dateEnd'] = $filter_date_end;
+    }
+    // Exclude Live Filter
+    if ($filter_exclude_live === 1) {
+        $sqlConditions .= " AND vl.wasLive = 0";
+    }
+
+    // Combine SQL parts
+    // If $sqlWhere was replaced by creator condition, $sqlConditions should be appended to it.
+    // Otherwise, $sqlConditions are appended to "WHERE 1=1"
+    if (!empty($creators)) {
+         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy;
+    } else {
+         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere /* which is WHERE 1=1 */ . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy;
+    }
+
+    $stmt = $pdo->prepare($sql);
+
+    // Bind parameters
+    $paramIndex = 1;
+    if (!empty($creators)) {
+        foreach ($creators as $creator) {
+            $stmt->bindValue($paramIndex++, $creator, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':creator_count', $creator_count, PDO::PARAM_INT);
+    }
+
+    foreach ($filterParams as $placeholder => $value) {
+        $stmt->bindValue($placeholder, $value); // PDO will attempt to infer type
+    }
+
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_COLUMN, 0); // Fetches all YoutubeIDs into a single, flat array
+}
 
 function insertreport($pdo,array $data) { // Report function input
 
@@ -348,6 +431,31 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
 
         // Get the total count of videos FIRST
         $total_videos = countTotalVideosByCreators($pdo, $creators, $filter_channel, $filter_title, $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast); 
+
+        $playlist_url = null;
+        $all_video_ids_for_playlist = []; // Initialize
+        
+        if ($total_videos > 1 && $total_videos <= 50) {
+            // Fetch all YoutubeIDs for the playlist using the new function
+            // Ensure $pdo, $creators, and all filters are available in this scope
+            $all_video_ids_for_playlist = getAllMatchingVideoIds(
+                $pdo,
+                $creators,
+                $filter_channel,
+                $filter_title,
+                $filter_date_start,
+                $filter_date_end,
+                $filter_exclude_live,
+                $filter_exclusive_cast
+            );
+        
+            if (!empty($all_video_ids_for_playlist)) {
+                $playlist_video_ids_string = implode(',', $all_video_ids_for_playlist);
+                $playlist_url = 'http://www.youtube.com/watch_videos?video_ids=' . $playlist_video_ids_string;
+
+            }
+        }
+
 
         if ($total_videos > 0) {
             $total_pages = (int)ceil($total_videos / $results_per_page);
@@ -488,8 +596,20 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
                         } elseif (!empty($creators) && $total_videos === 0) { // Check creators is not empty before saying no videos found
                             echo "<p>No videos found matching the selected creators.</p>"; // CHECKPOINT -- add cool image here, diggy hole. 
                         } elseif ($total_videos > 0) {
-                            // Display the total count and page info
-                            echo "<p>Found $total_videos results. Showing page $current_page of $total_pages.</p>";
+                            echo '<div class="results-header">';
+                            echo '  <div class="flex-spacer-results-header"></div>';
+                            echo '  <p class="results-info-text">Found ' . $total_videos . ' results. Showing page ' . $current_page . ' of ' . $total_pages . '.</p>';
+                            echo '  <div class="flex-spacer-results-header"></div>';
+                            if (isset($playlist_url) && $playlist_url) {
+                                $video_count_for_playlist = count($all_video_ids_for_playlist);
+                                echo '  <div class="export-playlist-container">'; 
+                                echo '    <span class="export-playlist-text">Open as playlist (' . $video_count_for_playlist . ' videos)</span>';
+                                echo '    <a href="' . htmlspecialchars($playlist_url) . '" target="_blank" rel="noopener noreferrer" class="export-playlist-icon-button" title="Create Playlist (' . $video_count_for_playlist . ' videos)">';
+                                echo '      <span class="playlist-icon-char">⎙</span>';
+                                echo '    </a>';
+                                echo '  </div>';
+                            }
+                            echo '</div>'; // End of .results-header
                         }
                 ?>
             <article class="searchresults">  <!-- Here go the results of the search-->
