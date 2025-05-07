@@ -393,6 +393,15 @@ unset($_SESSION['flash_message']);
             /* No transition needed for size, but opacity transition can be kept if message fades logo */
         }
 
+        .flash-area-container > a {
+        display: block;
+        text-decoration: none; 
+        padding: 0;             
+        border: 0;              
+        font-size: 0;  
+        line-height: 0; 
+        }
+
         /* Styling for the message itself when inside the flash-area-container */
         .flash-area-container .message {
                 position: absolute;
@@ -633,7 +642,7 @@ unset($_SESSION['flash_message']);
     <main>
         <header>
         <div class="flash-area-container">
-        <img src="yogsearch.webp" alt="Yogsearch Logo" class="flash-area-logo">
+        <a href="/"><img src="yogsearch.webp" alt="Yogsearch Logo" class="flash-area-logo"></a>
         <?php if ($flashMessage): ?>
             <div class="message <?= htmlspecialchars($flashMessage['type']) ?>">
                 <?= htmlspecialchars($flashMessage['text']) ?>
