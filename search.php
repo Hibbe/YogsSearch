@@ -621,7 +621,7 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
                 ?>
                         <div class="card">
                         <label for="vidTITLE" id="TI<?= htmlspecialchars($video['YoutubeID']); ?>"><h4><a alt="<?= htmlspecialchars($video['YoutubeID']); ?>" id="TI<?= htmlspecialchars($video['YoutubeID']); ?>" href="https://youtube.com/watch?v=<?= htmlspecialchars($video['YoutubeID']); ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= htmlspecialchars($video['Title']); ?></span></h4></label>
-                            <div class="ytimg"><img alt="Thumbnail" src="https://i.ytimg.com/vi/<?= htmlspecialchars($video['YoutubeID']); ?>/hqdefault.jpg"></a></div>
+                            <div class="ytimg"><img loading="lazy" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= htmlspecialchars($video['YoutubeID']); ?>/hqdefault.jpg"></a></div>
                             <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
                             <a class="cardReport" href="<?= htmlspecialchars($report_url_without_repid); ?>">Report issue</a>
                             <?php } else { ?>
