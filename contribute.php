@@ -171,14 +171,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedChannelFilter = $_POST['filter_channel'] ?? '';
     $submittedTitleFilter = $_POST['filter_title'] ?? '';
 
-    // Handle Persistent Selection Logic
+    // Handle Persistent Selection Logic for Cast and Ban checkbox
     if ($isSubmit && $submittedChannelFilter !== '' && $submittedTitleFilter !== '') {
         // Persist selection ONLY if Submit is clicked AND both filters are set
         $_SESSION['persistent_cast_selection'] = $selectedCastNames;
+
+        // Persist ban state if ban checkbox was checked during this submission
+        $_SESSION['persistent_ban_state'] = isset($_POST['ban_video']) && $_POST['ban_video'] == '1';
+
     } else {
         // Clear persistence if Skip is clicked, Filters are applied,
         // or Submit is clicked without both filters active.
         unset($_SESSION['persistent_cast_selection']);
+        // Also clear persistent ban state
+        unset($_SESSION['persistent_ban_state']);
     }
 
 // --- Decision: Submit or Skip ---
@@ -292,6 +298,9 @@ $filterDateEnd = $_SESSION['filter_date_end'] ?? '';
 
 // Retrieve Persisted Cast Selection
 $persistedCast = $_SESSION['persistent_cast_selection'] ?? [];
+
+// Retrieve Persisted Ban State
+$persistedBan = $_SESSION['persistent_ban_state'] ?? false;
 
 // Initialize skipped videos array if needed
 if (!isset($_SESSION['skipped_videos'])) {
@@ -729,7 +738,8 @@ unset($_SESSION['flash_message']);
                     <input type="checkbox"
                         id="ban_video_checkbox"
                         name="ban_video"
-                        value="1">
+                        value="1"
+                        <?= $persistedBan ? 'checked' : '' ?>>
                     <label for="ban_video_checkbox" id="ban_video_label" class="tooltip-trigger" data-tooltip="Press if video contains forbidden member"> 
                         Video contains forbidden past member
                     </label>

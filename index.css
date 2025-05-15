@@ -600,6 +600,32 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .cardReport:active {color:#be6b05; text-decoration: none;}
 
 /*#endregion searchcards*/
+/*#region Playlistcards*/
+  .playlist-card {
+      /* Inherits basic .card styles */
+      background-color: #373d92; /* A slightly different blue */
+      border-color: #535bcf; /* Match the textarea border */
+      /* Adjust padding or margins if needed */
+      margin-top: 20px !important; /* Ensure consistent spacing */
+  }
+
+  .playlist-card h4 a {
+      color: #EC8305; /* Orange title for playlists */
+  }
+
+  .playlist-card .cardReport {
+      color: #d6dee1; /* Lighter grey for the "Manage Playlist" link */
+  }
+
+  .playlist-card .cardReport:hover {
+      color: #ffffff; /* White on hover */
+  }
+
+  /* Adjust thumbnail container if needed */
+  .playlist-card .ytimg {
+      border: 2px solid #161D70; /* Add a border to the thumbnail */
+  }
+/*#endregion*/
 /*#region reportcard */
 .repcard {
   background-color: #161D70;

@@ -2,70 +2,107 @@
 session_start();
 require_once 'config.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. Extract data from POST
-    $selected_iids = $_POST['iid'] ?? [];
-    $filter_channel = $_POST['filter_channel'] ?? '';
-    $filter_title = trim($_POST['filter_title'] ?? ''); // Trim whitespace
-    $filter_date_start = $_POST['filter_date_start'] ?? '';
-    $filter_date_end = $_POST['filter_date_end'] ?? '';
-    $filter_exclude_live = isset($_POST['filter_exclude_live']) ? 1 : 0; // 1 if checked, 0 otherwise
-    $filter_exclusive_cast = isset($_POST['filter_exclusive_cast']) ? 1 : 0;
+$dsn = "sqlite:$db";
+$dsrep = "sqlite:$dbrep";
 
-    // 2. Basic Validation/Sanitization (Add more as needed)
-    // Ensure iids are strings (or expected format)
-    $sanitized_iids = [];
-    if (is_array($selected_iids)) {
-        foreach ($selected_iids as $iid) {
-            // Example: Allow only alphanumeric - adjust if names have other chars
-            if (is_string($iid) && preg_match('/^[a-zA-Z0-9\s\-]+$/', $iid)) {
-                 $sanitized_iids[] = $iid;
+define('CARDS_PER_PAGE', 20);        // Number of cards (playlist or video) to display per page
+define('MAX_DISPLAY_PAGES', 20);     // Maximum number of pages accessible to the user
+define('MAX_VIDEOS_TO_SCAN_FOR_CARDS', 1500); // Max raw videos to fetch from DB to build the card list
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_SESSION)) { // Ensure session is started if not already
+        session_start();
+    }
+
+    // Differentiate POST type: Is it a report submission or a filter submission?
+    if (isset($_POST['RepYtId']) && isset($_POST['repimp'])) {
+        // --- HANDLE REPORT SUBMISSION ---
+        $RepYtId = htmlspecialchars($_POST['RepYtId']);
+        $repimp = htmlspecialchars($_POST['repimp']);
+
+        // Get iid[] and page from the POSTed hidden fields from the report form
+        // These are crucial for redirecting back to the correct search state.
+        $current_iids_from_form = $_POST['iid'] ?? []; 
+        $current_page_from_form = $_POST['page'] ?? 1;
+
+        $pdo_rep = null; 
+        $report_success = false;
+        try {
+            $pdo_rep = new PDO($dsrep); // Use your database connection for reports
+            $pdo_rep->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            // Pass only the necessary data to insertreport
+            if (insertreport($pdo_rep, ['RepYtId' => $RepYtId, 'repimp' => $repimp])) {
+                $report_success = true;
+            }
+        } catch (PDOException $e) {
+            error_log("Report Database error: " . $e->getMessage());
+            // $report_success remains false
+        } finally {
+            $pdo_rep = null;
+        }
+
+        // Construct the redirect URL to go back to the search results page,
+        // showing the success/fail message and staying on the correct video.
+        $redirect_query_parts = [];
+        if (!empty($current_iids_from_form) && is_array($current_iids_from_form)) {
+            // Use http_build_query for arrays to correctly form iid[]=...&iid[]=...
+            $redirect_query_parts[] = http_build_query(['iid' => $current_iids_from_form]);
+        }
+        $redirect_query_parts[] = 'page=' . (int)$current_page_from_form;
+        $redirect_query_parts[] = 'repid=' . urlencode($RepYtId); // To keep the report section open/highlighted
+        $redirect_query_parts[] = 'rep=' . ($report_success ? 'success' : 'fail');
+
+        $redirect_url = 'search.php?' . implode('&', array_filter($redirect_query_parts));
+        // Add the anchor to jump to the video
+        $redirect_url .= '#TI' . urlencode($RepYtId); 
+
+        header("Location: " . $redirect_url, true, 303); // Use 303 See Other for POST-redirect-GET
+        exit;
+
+    } else {
+        // --- HANDLE FILTER SUBMISSION (from index.php or a general filter form) ---
+        // This is your existing filter handling logic (original lines 8-57)
+        $selected_iids = $_POST['iid'] ?? [];
+        $filter_channel = $_POST['filter_channel'] ?? '';
+        $filter_title = trim($_POST['filter_title'] ?? '');
+        $filter_date_start = $_POST['filter_date_start'] ?? '';
+        $filter_date_end = $_POST['filter_date_end'] ?? '';
+        $filter_exclude_live = isset($_POST['filter_exclude_live']) ? 1 : 0;
+        $filter_exclusive_cast = isset($_POST['filter_exclusive_cast']) ? 1 : 0;
+
+        $sanitized_iids = [];
+        if (is_array($selected_iids)) {
+            foreach ($selected_iids as $iid) {
+                if (is_string($iid) && preg_match('/^[a-zA-Z0-9\s\-]+$/', $iid)) {
+                     $sanitized_iids[] = $iid;
+                }
             }
         }
+
+        // Basic date validation (YYYY-MM-DD format)
+        $date_pattern = '/^\d{4}-\d{2}-\d{2}$/';
+        if (!empty($filter_date_start) && !preg_match($date_pattern, $filter_date_start)) $filter_date_start = '';
+        if (!empty($filter_date_end) && !preg_match($date_pattern, $filter_date_end)) $filter_date_end = '';
+
+
+        $_SESSION['search_filter_channel'] = htmlspecialchars($filter_channel);
+        $_SESSION['search_filter_title'] = htmlspecialchars($filter_title);
+        $_SESSION['search_filter_date_start'] = $filter_date_start;
+        $_SESSION['search_filter_date_end'] = $filter_date_end;
+        $_SESSION['search_filter_exclude_live'] = $filter_exclude_live;
+        $_SESSION['search_filter_exclusive_cast'] = $filter_exclusive_cast;
+        $_SESSION['search_page'] = 1; // Reset to page 1 for new filter search
+
+        $redirect_url = 'search.php';
+        if (!empty($sanitized_iids)) {
+            $redirect_url .= '?' . http_build_query(['iid' => $sanitized_iids]);
+        }
+        // If no iids, it will redirect to search.php, which will then show the "Please select" message.
+
+        header("Location: " . $redirect_url);
+        exit;
     }
-    // Only proceed if at least one valid creator was selected
-    if (empty($sanitized_iids)) {
-         // Handle error: Redirect back to index or show message
-         // For now, we'll just proceed, search will likely yield no results
-    }
-
-
-    // Sanitize other filters
-    // Channel ID format depends on what you store (e.g., 'UC...')
-    $filter_channel = htmlspecialchars($filter_channel); // Basic sanitization
-    $filter_title = htmlspecialchars($filter_title);
-    // Basic date validation (YYYY-MM-DD format)
-    $date_pattern = '/^\d{4}-\d{2}-\d{2}$/';
-    if (!preg_match($date_pattern, $filter_date_start)) $filter_date_start = '';
-    if (!preg_match($date_pattern, $filter_date_end)) $filter_date_end = '';
-
-
-    // 3. Store non-iid filters in Session
-    $_SESSION['search_filter_channel'] = $filter_channel;
-    $_SESSION['search_filter_title'] = $filter_title;
-    $_SESSION['search_filter_date_start'] = $filter_date_start;
-    $_SESSION['search_filter_date_end'] = $filter_date_end;
-    $_SESSION['search_filter_exclude_live'] = $filter_exclude_live;
-    $_SESSION['search_filter_exclusive_cast'] = $filter_exclusive_cast;
-    // Clear pagination page number when submitting a new search
-    $_SESSION['search_page'] = 1; // Start at page 1 for new filter submission
-
-
-    // 4. Construct Redirect URL with ONLY iid parameters
-    $redirect_url = 'search.php';
-    if (!empty($sanitized_iids)) {
-        // http_build_query correctly handles array parameters like iid[]
-        $redirect_url .= '?' . http_build_query(['iid' => $sanitized_iids]);
-    } else {
-        // Maybe redirect to index if no creators selected?
-        // $redirect_url = 'index.php?error=no_creators';
-    }
-
-    // 5. Perform Redirect
-    header("Location: " . $redirect_url);
-    exit; // Important to stop script execution after redirect
-
-}
+} // END OF if ($_SERVER['REQUEST_METHOD'] === 'POST')
 
 function getVideosByCreators(PDO $pdo, array $creators, int $page = 1, int $limit = 20, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0) {
 
@@ -74,7 +111,7 @@ function getVideosByCreators(PDO $pdo, array $creators, int $page = 1, int $limi
     $offset = ($page - 1) * $limit;
 
     // --- START: Dynamic SQL Building ---
-    $sqlBaseSelect = "SELECT vl.YoutubeID, vl.Title";
+    $sqlBaseSelect = "SELECT vl.YoutubeID, vl.Title, vl.PlaylistID";
     $sqlBaseFrom = "FROM VideoList vl
                     INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
                     INNER JOIN CastList cl ON cl.CastID = vc.CastID";
@@ -211,9 +248,9 @@ function countTotalVideosByCreators(PDO $pdo, array $creators, string $filter_ch
 
     // Combine parts for inner query
     $innerSql = $sqlInnerSelect . " " . $sqlBaseFrom . " " . $sqlBaseWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving;
-
+    $innerSqlWithLimit = $innerSql . " LIMIT " . MAX_VIDEOS_TO_SCAN_FOR_CARDS;
     // Wrap in COUNT(*)
-    $sql = "SELECT COUNT(*) FROM (" . $innerSql . ") AS TotalCount";
+    $sql = "SELECT COUNT(*) FROM (" . $innerSqlWithLimit . ") AS LimitedTotalCount";
     // --- END: Dynamic SQL Building for Count ---
 
     $stmt = $pdo->prepare($sql);
@@ -254,6 +291,7 @@ function getAllMatchingVideoIds(PDO $pdo, array $creators, string $filter_channe
     $sqlGroupBy = "";
     $sqlHaving = "";
     $sqlOrderBy = "ORDER BY vl.publishedAt DESC"; // Consistent ordering
+    $sqlLimit = "LIMIT 51";
 
     $filterParams = []; // Parameters for WHERE/HAVING filters
 
@@ -300,9 +338,9 @@ function getAllMatchingVideoIds(PDO $pdo, array $creators, string $filter_channe
     // If $sqlWhere was replaced by creator condition, $sqlConditions should be appended to it.
     // Otherwise, $sqlConditions are appended to "WHERE 1=1"
     if (!empty($creators)) {
-         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy;
+         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy . " " . $sqlLimit;
     } else {
-         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere /* which is WHERE 1=1 */ . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy;
+         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere /* which is WHERE 1=1 */ . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy . " " . $sqlLimit;
     }
 
     $stmt = $pdo->prepare($sql);
@@ -324,6 +362,127 @@ function getAllMatchingVideoIds(PDO $pdo, array $creators, string $filter_channe
     return $stmt->fetchAll(PDO::FETCH_COLUMN, 0); // Fetches all YoutubeIDs into a single, flat array
 }
 
+function generate_card_list(PDO $pdo, array $creators, string $filter_channel, string $filter_title, string $filter_date_start, string $filter_date_end, int $filter_exclude_live, int $filter_exclusive_cast, array $playlist_details_lookup_for_card_generation, bool $can_group_playlists_overall) {
+    
+    $card_list = [];
+    $processed_playlist_ids_in_card_list = []; // Tracks PlaylistIDs already turned into a playlist card
+
+    // --- 1. SQL Query to fetch a broad set of candidate videos ---
+    // This SQL is similar to getVideosByCreators but without page-specific offset/limit,
+    // and includes all necessary fields for card generation.
+    // It will be limited by MAX_VIDEOS_TO_SCAN_FOR_CARDS.
+
+    $creator_list_sql = str_repeat('?, ', count($creators) - 1) . '?';
+    $creator_count_sql = count($creators);
+
+    $sqlBaseSelect = "SELECT vl.VideoID, vl.YoutubeID, vl.Title, vl.PlaylistID, vl.publishedAt, vl.channelName /* Add any other fields needed for card display */";
+    $sqlBaseFrom = "FROM VideoList vl
+                    INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
+                    INNER JOIN CastList cl ON cl.CastID = vc.CastID";
+    $sqlBaseWhere = "WHERE cl.CastName IN ($creator_list_sql)";
+    $sqlConditions = "";
+    $filterParams = [];
+
+    if (!empty($filter_channel)) {
+        $sqlConditions .= " AND vl.channelName = :channelName"; 
+        $filterParams[':channelName'] = $filter_channel;       
+    }
+    if (!empty($filter_title)) {
+        $sqlConditions .= " AND vl.Title LIKE :titleSearch";
+        $filterParams[':titleSearch'] = '%' . $filter_title . '%';
+    }
+    if (!empty($filter_date_start)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) >= :dateStart";
+        $filterParams[':dateStart'] = $filter_date_start;
+    }
+    if (!empty($filter_date_end)) {
+        $sqlConditions .= " AND DATE(vl.publishedAt) <= :dateEnd";
+        $filterParams[':dateEnd'] = $filter_date_end;
+    }
+    if ($filter_exclude_live === 1) {
+        $sqlConditions .= " AND vl.wasLive = 0";
+    }
+
+    $sqlGroupBy = "GROUP BY vl.VideoID, vl.YoutubeID, vl.Title, vl.PlaylistID, vl.publishedAt, vl.channelName"; // Group by all selected non-aggregated columns
+    $sqlHaving = "HAVING COUNT(DISTINCT cl.CastID) = :creator_count_sql";
+    if ($filter_exclusive_cast === 1) {
+        $sqlHaving .= " AND (SELECT COUNT(vc_total.CastID) FROM VideoCast vc_total WHERE vc_total.VideoID = vl.VideoID) = :creator_count_sql";
+    }
+    $sqlOrderBy = "ORDER BY vl.publishedAt DESC";
+    $sqlLimit = "LIMIT " . MAX_VIDEOS_TO_SCAN_FOR_CARDS;
+
+    $sql = $sqlBaseSelect . " " . $sqlBaseFrom . " " . $sqlBaseWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy . " " . $sqlLimit;
+
+    $stmt = $pdo->prepare($sql);
+    $paramIndex = 1;
+    foreach ($creators as $creator) {
+        $stmt->bindValue($paramIndex++, $creator, PDO::PARAM_STR);
+    }
+    $stmt->bindValue(':creator_count_sql', $creator_count_sql, PDO::PARAM_INT);
+    foreach ($filterParams as $placeholder => $value) {
+        $stmt->bindValue($placeholder, $value);
+    }
+    $stmt->execute();
+    $scanned_videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // --- 2. PHP Processing to build the list of "cards" ---
+    if (empty($scanned_videos)) {
+        return []; // No videos found from scan
+    }
+
+    // This flag determines if we are allowed to group playlists at all.
+    // We get this based on a quick check if the scanned videos are more than 1.
+    // The original `$total_videos > 1` check for playlist grouping.
+    $allow_playlist_grouping = $can_group_playlists_overall;
+
+
+    foreach ($scanned_videos as $video_data) {
+        $is_playlist_video = !empty($video_data['PlaylistID']);
+        $current_playlist_id = $video_data['PlaylistID'] ?? null;
+
+        if ($allow_playlist_grouping && $is_playlist_video && !in_array($current_playlist_id, $processed_playlist_ids_in_card_list)) {
+            // Check if this playlist has details and can be a card
+            $playlist_details_for_this_card = $playlist_details_lookup_for_card_generation[$current_playlist_id] ?? null;
+            $has_youtube_info_for_card = !empty($playlist_details_for_this_card['YouTubePlaylistID']) && !empty($playlist_details_for_this_card['FirstVideoYoutubeID']);
+
+            if ($has_youtube_info_for_card) {
+                // It's a new playlist that can be represented by a card
+                $card_list[] = [
+                    'type' => 'playlist',
+                    'id' => $current_playlist_id, // PlaylistID
+                    // Store necessary data from $playlist_details_for_this_card and maybe $video_data for the first video
+                    'name' => $playlist_details_for_this_card['PlaylistName'],
+                    'youtube_playlist_id' => $playlist_details_for_this_card['YouTubePlaylistID'],
+                    'first_video_youtube_id' => $playlist_details_for_this_card['FirstVideoYoutubeID'],
+                    'total_video_count_in_playlist' => $playlist_details_for_this_card['VideoCount'] ?? 0 // From your existing simple count
+                ];
+                $processed_playlist_ids_in_card_list[] = $current_playlist_id;
+            } else {
+                // It's in a playlist, but we can't make a card (e.g. no details), so treat its first video as an individual video.
+                // Or, if you prefer, skip videos from playlists without details entirely.
+                // For now, let's add it as an individual video.
+                 $card_list[] = [
+                    'type' => 'video',
+                    'id' => $video_data['VideoID'],
+                    'data' => $video_data // Full video data
+                ];
+            }
+        } else if ($is_playlist_video && in_array($current_playlist_id, $processed_playlist_ids_in_card_list)) {
+            // This video belongs to a playlist for which a card has ALREADY been added to $card_list.
+            // So, we DO NOT add this individual video to the card list. The playlist card covers it.
+            continue; 
+        } else {
+            // It's an individual video (not in a playlist, or its playlist couldn't form a card and we're here by fallback)
+            $card_list[] = [
+                'type' => 'video',
+                'id' => $video_data['VideoID'], // Or YoutubeID if that's your primary key for display
+                'data' => $video_data // Full video data
+            ];
+        }
+    }
+    return $card_list;
+}
+
 function insertreport($pdo,array $data) { // Report function input
 
     $sql = "INSERT INTO videoreports (vidID, repinput) VALUES (:vidID, :repinput)";
@@ -335,18 +494,24 @@ function insertreport($pdo,array $data) { // Report function input
     $stmt->execute($params);
     return true; // Indicate successful insert
   }
+// end funct
 
-$dsn = "sqlite:$db";
-$dsrep = "sqlite:$dbrep";
-
-$videos = []; // Initialize videos array
-$total_videos = 0; // Initialize total count
+// $videos = []; // This will be replaced by $cards_for_this_page later
+// $total_videos = 0; // This will be replaced by $total_available_cards
 $current_page = 1; // Default page
-$results_per_page = 20; // Set results per page
-$total_pages = 0; // Initialize total pages
+// $results_per_page = 20; // Will use CARDS_PER_PAGE constant instead
+// $total_pages = 0; // Will be $display_total_pages
 $creators = []; // Initialize creators array
-$urlrep = ''; // Initialize URL rep string
+$urlrep = ''; // Initialize URL rep string - review if still needed for report form
 $base_query_string = ''; // To store iid parameters for pagination links
+
+// --- NEW VARIABLES FOR CARD-BASED PAGINATION ---
+$playlist_details_lookup = []; // Will be populated more globally now
+$all_possible_cards = [];    // To store the full list of generated cards
+$cards_for_this_page = [];   // To store cards for the current page view
+$total_available_cards = 0;  // Total number of displayable cards found
+$display_total_pages = 0;    // Total pages to show to the user (respecting MAX_DISPLAY_PAGES)
+
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {   
     if (!isset($_SESSION)) session_start();
@@ -429,16 +594,155 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
              $urlrep = implode("&iid%5B%5D=", $creators); // Keep original urlrep logic if needed elsewhere
         }
 
-        // Get the total count of videos FIRST
-        $total_videos = countTotalVideosByCreators($pdo, $creators, $filter_channel, $filter_title, $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast); 
+        // --- Determine if playlist grouping is allowed based on a preliminary count ---
+        $preliminary_video_count_for_grouping_check = countTotalVideosByCreators(
+            $pdo, $creators, $filter_channel, $filter_title, 
+            $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast
+        );
+        $can_group_playlists_globally = ($preliminary_video_count_for_grouping_check > 1);
 
-        $playlist_url = null;
-        $all_video_ids_for_playlist = []; // Initialize
+        // --- Pre-populate playlist_details_lookup for all relevant playlists --- START OF THIS PLAYLIST BLOCK
+        // This SQL finds PlaylistIDs from videos matching all filters, up to the scan limit.
+        $creator_list_sql_for_pl_ids = str_repeat('?, ', count($creators) - 1) . '?';
+        $creator_count_sql_for_pl_ids = count($creators);
+
+        $sql_conditions_for_pl_ids = "";
+        $filter_params_for_pl_ids = [];
+        // Build $sql_conditions_for_pl_ids and $filter_params_for_pl_ids
+        // similar to how it's done in generate_card_list or countTotalVideosByCreators
+        // (channel, title, date, exclude_live)
+        if (!empty($filter_channel)) {
+            $sql_conditions_for_pl_ids .= " AND vl.channelName = :channelName_pl"; 
+            $filter_params_for_pl_ids[':channelName_pl'] = $filter_channel;       
+        }
+        if (!empty($filter_title)) {
+            $sql_conditions_for_pl_ids .= " AND vl.Title LIKE :titleSearch_pl";
+            $filter_params_for_pl_ids[':titleSearch_pl'] = '%' . $filter_title . '%';
+        }
+        if (!empty($filter_date_start)) {
+            $sql_conditions_for_pl_ids .= " AND DATE(vl.publishedAt) >= :dateStart_pl";
+            $filter_params_for_pl_ids[':dateStart_pl'] = $filter_date_start;
+        }
+        if (!empty($filter_date_end)) {
+            $sql_conditions_for_pl_ids .= " AND DATE(vl.publishedAt) <= :dateEnd_pl";
+            $filter_params_for_pl_ids[':dateEnd_pl'] = $filter_date_end;
+        }
+        if ($filter_exclude_live === 1) {
+            $sql_conditions_for_pl_ids .= " AND vl.wasLive = 0";
+        }
+
+        $sql_having_for_pl_ids = "HAVING COUNT(DISTINCT cl.CastID) = :creator_count_sql_for_pl_ids";
+        if ($filter_exclusive_cast === 1) {
+            $sql_having_for_pl_ids .= " AND (SELECT COUNT(vc_total.CastID) FROM VideoCast vc_total WHERE vc_total.VideoID = vl.VideoID) = :creator_count_sql_for_pl_ids";
+        }
+
+        // Query to get distinct PlaylistIDs from filtered videos
+        $sql_get_all_playlist_ids_full = "
+            SELECT DISTINCT vl.PlaylistID 
+            FROM VideoList vl
+            INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
+            INNER JOIN CastList cl ON cl.CastID = vc.CastID
+            WHERE cl.CastName IN ($creator_list_sql_for_pl_ids) 
+                  {$sql_conditions_for_pl_ids}
+                  AND vl.PlaylistID IS NOT NULL AND vl.PlaylistID != ''
+            GROUP BY vl.VideoID, vl.PlaylistID -- Group by VideoID first to apply cast HAVING
+            ORDER BY vl.publishedAt DESC -- Optional: ordering might not be strictly needed here
+            LIMIT " . MAX_VIDEOS_TO_SCAN_FOR_CARDS; // Use the same scan limit
+
+        // Prepare and execute this query to get candidate VideoID/PlaylistID pairs
+        // then extract unique PlaylistIDs from that.
+        // A more direct way for *just* PlaylistIDs (if subqueries are efficient):
+        $sql_get_involved_playlist_ids = "
+            SELECT DISTINCT sq.PlaylistID 
+            FROM (
+                SELECT vl.PlaylistID, vl.VideoID /* Need VideoID for HAVING */
+                FROM VideoList vl
+                INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
+                INNER JOIN CastList cl ON cl.CastID = vc.CastID
+                WHERE cl.CastName IN ($creator_list_sql_for_pl_ids)
+                      {$sql_conditions_for_pl_ids}
+                      AND vl.PlaylistID IS NOT NULL AND vl.PlaylistID != ''
+                GROUP BY vl.VideoID, vl.PlaylistID
+                {$sql_having_for_pl_ids}
+                ORDER BY vl.publishedAt DESC
+                LIMIT " . MAX_VIDEOS_TO_SCAN_FOR_CARDS . "
+            ) AS sq
+            WHERE sq.PlaylistID IS NOT NULL AND sq.PlaylistID != ''";
+
+        $stmt_get_pl_ids = $pdo->prepare($sql_get_involved_playlist_ids);
+        $paramIndex_pl = 1;
+        foreach ($creators as $creator) {
+            $stmt_get_pl_ids->bindValue($paramIndex_pl++, $creator, PDO::PARAM_STR);
+        }
+        $stmt_get_pl_ids->bindValue(':creator_count_sql_for_pl_ids', $creator_count_sql_for_pl_ids, PDO::PARAM_INT);
+        foreach ($filter_params_for_pl_ids as $placeholder => $value) {
+            $stmt_get_pl_ids->bindValue($placeholder, $value);
+        }
+        $stmt_get_pl_ids->execute();
+        $unique_involved_playlist_ids = $stmt_get_pl_ids->fetchAll(PDO::FETCH_COLUMN, 0);
+        $unique_involved_playlist_ids = array_unique(array_filter($unique_involved_playlist_ids)); // Ensure truly unique
+
+        if (!empty($unique_involved_playlist_ids)) {
+            $placeholders_involved = implode(',', array_fill(0, count($unique_involved_playlist_ids), '?'));
+            // This is your existing query for playlist details, now used more globally
+            $sql_playlists_details = "SELECT PlaylistID, PlaylistName, YouTubePlaylistID, FirstVideoYoutubeID, 
+                                       (SELECT COUNT(*) FROM VideoList WHERE VideoList.PlaylistID = Playlists.PlaylistID) as VideoCount 
+                                     FROM Playlists 
+                                     WHERE PlaylistID IN ($placeholders_involved)";
+            $stmt_playlists_details = $pdo->prepare($sql_playlists_details);
+            $stmt_playlists_details->execute(array_values($unique_involved_playlist_ids)); // Ensure array keys are 0-indexed
+            while ($row = $stmt_playlists_details->fetch(PDO::FETCH_ASSOC)) {
+                $playlist_details_lookup[$row['PlaylistID']] = $row;
+            }
+        } //end of this PLAYLIST block
+
+            $all_possible_cards = generate_card_list(
+            $pdo, $creators, $filter_channel, $filter_title, 
+            $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast,
+            $playlist_details_lookup, // Pass the pre-fetched playlist details
+            $can_group_playlists_globally 
+        );
+
+        $total_available_cards = count($all_possible_cards);
+
+        if ($total_available_cards > 0) {
+            $actual_total_pages = (int)ceil($total_available_cards / CARDS_PER_PAGE);
+            // Apply the MAX_DISPLAY_PAGES limit
+            $display_total_pages = min($actual_total_pages, MAX_DISPLAY_PAGES); 
+
+            // Ensure current page is not out of bounds for the displayable pages
+            if ($current_page > $display_total_pages && $display_total_pages > 0) {
+                $current_page = $display_total_pages;
+            }
+            // If there are cards, there should be at least 1 page, even if fewer than CARDS_PER_PAGE
+            if ($display_total_pages === 0 && $total_available_cards > 0) {
+                 $display_total_pages = 1;
+            }
+
+        } else {
+            // No cards found
+            $display_total_pages = 0; 
+            // $current_page is already 1 or set from GET, can leave as is or force to 1
+            if ($total_available_cards === 0) $current_page = 1; // No results, so "page 1" of 0 pages
+        }
+
+        if ($total_available_cards > 0) {
+            $offset_cards = ($current_page - 1) * CARDS_PER_PAGE;
+            $cards_for_this_page = array_slice($all_possible_cards, $offset_cards, CARDS_PER_PAGE);
+        } else {
+            $cards_for_this_page = []; // Ensure it's an empty array if no cards
+        }
+
+        // Get the total count of videos FIRST
+        // $total_videos = countTotalVideosByCreators(...); // This line IS USED for $preliminary_video_count_for_grouping_check above this section
+
         
-        if ($total_videos > 1 && $total_videos <= 50) {
-            // Fetch all YoutubeIDs for the playlist using the new function
-            // Ensure $pdo, $creators, and all filters are available in this scope
-            $all_video_ids_for_playlist = getAllMatchingVideoIds(
+        $playlist_url = null;
+        $video_ids_for_url_playlist = []; 
+
+        // Use the preliminary raw video count to decide if this feature is active
+        if ($preliminary_video_count_for_grouping_check > 1 && $preliminary_video_count_for_grouping_check <= 50) {
+            $fetched_video_ids_for_feature = getAllMatchingVideoIds( // Call the (now limited) function
                 $pdo,
                 $creators,
                 $filter_channel,
@@ -447,17 +751,22 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
                 $filter_date_end,
                 $filter_exclude_live,
                 $filter_exclusive_cast
-            );
-        
-            if (!empty($all_video_ids_for_playlist)) {
-                $playlist_video_ids_string = implode(',', $all_video_ids_for_playlist);
-                $playlist_url = 'http://www.youtube.com/watch_videos?video_ids=' . $playlist_video_ids_string;
+            ); 
 
+            if (!empty($fetched_video_ids_for_feature)) {
+                // Take only up to the first 50 IDs for the playlist URL
+                $video_ids_for_url_playlist = array_slice($fetched_video_ids_for_feature, 0, 50);
+
+                if (!empty($video_ids_for_url_playlist)) {
+                    $playlist_video_ids_string = implode(',', $video_ids_for_url_playlist);
+                    $playlist_url = 'http://www.youtube.com/watch_videos?video_ids=' . $playlist_video_ids_string;
+                }
             }
         }
+        
 
 
-        if ($total_videos > 0) {
+        /* if ($total_videos > 0) {
             $total_pages = (int)ceil($total_videos / $results_per_page);
 
             // Ensure current page is not out of bounds
@@ -472,6 +781,40 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
              $total_pages = 0;
              $current_page = 1; // Or 0, depending on preference
         }
+
+            $playlist_details_lookup = [];
+        if (!empty($videos)) {
+            $unique_playlist_ids = [];
+            // Collect all unique PlaylistIDs from the fetched videos
+            foreach ($videos as $video) {
+                if (!empty($video['PlaylistID']) && !in_array($video['PlaylistID'], $unique_playlist_ids)) {
+                    $unique_playlist_ids[] = $video['PlaylistID'];
+                }
+            }
+
+            // If there are any unique playlist IDs in the results, fetch their details
+            if (!empty($unique_playlist_ids)) {
+                 try {
+                     // Use the existing $pdo connection
+                     $placeholders = implode(',', array_fill(0, count($unique_playlist_ids), '?'));
+                     $sql_playlists = "SELECT PlaylistID, PlaylistName, YouTubePlaylistID, FirstVideoYoutubeID, (SELECT COUNT(*) FROM VideoList WHERE VideoList.PlaylistID = Playlists.PlaylistID) as VideoCount FROM Playlists WHERE PlaylistID IN ($placeholders)";
+                     $stmt_playlists = $pdo->prepare($sql_playlists);
+                     $stmt_playlists->execute($unique_playlist_ids);
+
+                     // Store results in a lookup array keyed by PlaylistID
+                     while ($row = $stmt_playlists->fetch(PDO::FETCH_ASSOC)) {
+                         $playlist_details_lookup[$row['PlaylistID']] = $row;
+                     }
+
+                 } catch (PDOException $e) {
+                     // Handle database errors gracefully
+                     error_log("Database Error fetching playlist details: " . $e->getMessage());
+                     // Optionally set a user-friendly message to display on the page
+                     // $error_message = "Could not load some playlist details.";
+                 }
+                 
+            }
+        } */
 
     } catch (PDOException $e) {
         echo "Database error: " . $e->getMessage();
@@ -500,7 +843,17 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Yogsearch | <?php if (empty($creators)) { echo "Please select between 1 and 12 creators";} else if($total_videos === 0) { echo "No videos found";} else echo("Found ".$total_videos." videos with ".join(' & ', array_filter(array_merge(array(join(', ', array_slice($creators, 0, -1))), array_slice($creators, -1)), 'strlen'))); ?> </title>
+        <title>Yogsearch | <?php 
+            if (empty($creators) && !($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['RepYtId']))) { // Keep POST for report distinct
+                echo "Please select between 1 and 12 creators";
+            } else if ($total_available_cards === 0 && !empty($creators)) { // Check if creators were actually part of this search
+                echo "No videos found";
+            } else if (!empty($creators)) { 
+                echo("Found " . $total_available_cards . " videos featuring " . join(' & ', array_filter(array_merge(array(join(', ', array_slice($creators, 0, -1))), array_slice($creators, -1)), 'strlen'))); 
+            } else {
+                echo "Searching for new videos featuring your favourite creators"; // Default title if no specific state
+            }
+        ?> </title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <link rel="preload" href="/yogsearch.webp" as="image">
@@ -578,10 +931,10 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
 
 
                     <?php // Conditionally show the Next button block only if multiple pages exist
-                        if ($total_pages > 1):
+                        if ($display_total_pages > 1):
                     ?>
                         <?php // --- Next Page Link --- (Handles enabled/disabled state internally)
-                            if ($current_page < $total_pages): ?>
+                            if ($current_page < $display_total_pages): ?>
                             <li><a href="?<?= htmlspecialchars($base_query_string); ?>&page=<?= $current_page + 1; ?><?= isset($_GET['repid']) ? '&repid='.urlencode($_GET['repid']) : ''; ?>">Next »</a></li>
                         <?php else: ?>
                             <li class="disabled"><span>Next »</span></li>
@@ -593,59 +946,112 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
         <?php // Display messages or results
                         if (empty($creators) && !($_SERVER['REQUEST_METHOD'] == 'POST')) { // Show message only if not a POST result
                             echo "<p>Please select between 1 and 12 creators using the search on the main page.</p>";
-                        } elseif (!empty($creators) && $total_videos === 0) { // Check creators is not empty before saying no videos found
+                        } elseif (!empty($creators) && $total_available_cards === 0) { // Check creators is not empty before saying no videos found
                             echo "<p>No videos found matching the selected creators.</p>"; // CHECKPOINT -- add cool image here, diggy hole. 
-                        } elseif ($total_videos > 0) {
+                        } elseif ($total_available_cards > 0) {
                             echo '<div class="results-header">';
                             echo '  <div class="flex-spacer-results-header"></div>';
-                            echo '  <p class="results-info-text">Found ' . $total_videos . ' results. Showing page ' . $current_page . ' of ' . $total_pages . '.</p>';
-                            echo '  <div class="flex-spacer-results-header"></div>';
-                            if (isset($playlist_url) && $playlist_url) {
-                                $video_count_for_playlist = count($all_video_ids_for_playlist);
-                                echo '  <div class="export-playlist-container">'; 
-                                echo '    <span class="export-playlist-text">Open as playlist (' . $video_count_for_playlist . ' videos)</span>';
-                                echo '    <a href="' . htmlspecialchars($playlist_url) . '" target="_blank" rel="noopener noreferrer" class="export-playlist-icon-button" title="Create Playlist (' . $video_count_for_playlist . ' videos)">';
-                                echo '      <span class="playlist-icon-char">⎙</span>';
-                                echo '    </a>';
-                                echo '  </div>';
+                            $results_message = '';
+                            $actual_total_pages_needed_for_all_found_cards = (int)ceil($total_available_cards / CARDS_PER_PAGE);
+
+                            if ($actual_total_pages_needed_for_all_found_cards > MAX_DISPLAY_PAGES) { // If there are more total pages of results than we can fit within our limit
+                                $displayable_card_cap = MAX_DISPLAY_PAGES * CARDS_PER_PAGE;
+                                $results_message = "Found " . $displayable_card_cap . "+ results. ";
+                            } else {
+                                $results_message = "Found " . $total_available_cards . " results. ";
                             }
+                            $results_message .= "Showing page " . $current_page . " of " . $display_total_pages . ".";
+                            echo '  <p class="results-info-text">' . $results_message . '</p>';
+                            echo '  <div class="flex-spacer-results-header"></div>';
+                        if (isset($playlist_url) && $playlist_url && !empty($video_ids_for_url_playlist)) {
+                            $count_for_button_display = count($video_ids_for_url_playlist);
+                            echo '  <div class="export-playlist-container">'; 
+                            echo '    <span class="export-playlist-text">Open as playlist (' . $count_for_button_display . ' videos)</span>';
+                            echo '    <a href="' . htmlspecialchars($playlist_url) . '" target="_blank" rel="noopener noreferrer" class="export-playlist-icon-button" title="Open as playlist (' . $count_for_button_display . ' videos)">';
+                            echo '      <span class="playlist-icon-char">⎙</span>'; // Ensure this character displays correctly or use an image/SVG
+                            echo '    </a>';
+                            echo '  </div>';
+                        }
                             echo '</div>'; // End of .results-header
                         }
                 ?>
-            <article class="searchresults">  <!-- Here go the results of the search-->
-                <?php  
-                foreach ($videos as $video): {  //Search result cards
-                    $report_base_url = "?{$base_query_string}&page={$current_page}";
-                    $report_url_with_repid = "{$report_base_url}&repid=" . urlencode($video['YoutubeID']) . "#TI" . urlencode($video['YoutubeID']);
-                    $report_url_without_repid = "{$report_base_url}#TI" . urlencode($video['YoutubeID']); 
+            <article class="searchresults">  <?php
+                // The $processed_playlists_for_card array and its logic within this loop are no longer needed here.
+                // The generate_card_list() function has already determined unique playlist cards.
+
+                if (empty($cards_for_this_page) && !empty($creators)) {
+                    // This case is already handled by the message "No items found matching your criteria."
+                    // So, no specific message needed here unless you want a different one inside the article.
+                } elseif (!empty($cards_for_this_page)) { // Only loop if there are cards to display
+                    
+                    foreach ($cards_for_this_page as $card_item):
+                        if ($card_item['type'] === 'playlist') {
+                            // --- RENDER PLAYLIST CARD ---
+                            // Data for playlist card is directly in $card_item
+                            $playlist_id_to_render = $card_item['id']; // PlaylistID
+                            $playlist_name = htmlspecialchars($card_item['name']);
+                            $youtube_playlist_id_for_link = htmlspecialchars($card_item['youtube_playlist_id']);
+                            $first_video_yt_id_for_thumb = htmlspecialchars($card_item['first_video_youtube_id']);
+                            // This is the simple total video count IN that playlist (unfiltered by search criteria)
+                            $total_vids_in_pl = $card_item['total_video_count_in_playlist']; 
+
+                            $playlist_card_link = 'https://www.youtube.com/watch?v=' . $first_video_yt_id_for_thumb . '&list=' . $youtube_playlist_id_for_link;
+                            ?>
+                            <div class="card playlist-card"> <h4><a href="<?= $playlist_card_link; ?>" target="_blank" rel="noopener noreferrer">Playlist: <?= $playlist_name; ?></a></h4>
+                                <div class="ytimg">
+                                    <a href="<?= $playlist_card_link; ?>" target="_blank" rel="noopener noreferrer">
+                                    <img loading="lazy" alt="Playlist Thumbnail" src="https://i.ytimg.com/vi/<?= $first_video_yt_id_for_thumb; ?>/hqdefault.jpg">
+                                </div>
+                                <a class="cardReport" style="color: #8a8e91 !important;"> Total videos: <?= $total_vids_in_pl ?></a>
+                            </div>
+                            <?php
+                        } else { // $card_item['type'] === 'video'
+                            // --- RENDER INDIVIDUAL VIDEO CARD ---
+                            $video_data = $card_item['data']; // This contains the original video data fields (YoutubeID, Title, etc.)
+                            
+                            // Ensure $base_query_string and $current_page are correctly available here.
+                            // They are set before this loop in the main GET request processing block.
+                            $report_base_url = "?{$base_query_string}&page={$current_page}"; 
+                            $report_url_with_repid = "{$report_base_url}&repid=" . urlencode($video_data['YoutubeID']) . "#TI" . urlencode($video_data['YoutubeID']);
+                            $report_url_without_repid = "{$report_base_url}#TI" . urlencode($video_data['YoutubeID']); 
+                            ?>
+                            <div class="card">
+                                <label for="vidTITLE" id="TI<?= htmlspecialchars($video_data['YoutubeID']); ?>"><h4><a alt="<?= htmlspecialchars($video_data['YoutubeID']); ?>" id="TI<?= htmlspecialchars($video_data['YoutubeID']); ?>" href="https://youtube.com/watch?v=<?= htmlspecialchars($video_data['YoutubeID']); ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= htmlspecialchars($video_data['Title']); ?></span></h4></label>
+                                <div class="ytimg"><img loading="lazy" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= htmlspecialchars($video_data['YoutubeID']); ?>/hqdefault.jpg"></a></div>
+                                <?php if (isset($_GET['repid']) && $_GET['repid'] == $video_data['YoutubeID']) { ?>
+                                <a class="cardReport" href="<?= htmlspecialchars($report_url_without_repid); ?>">Report issue</a>
+                                <?php } else { ?>
+                                <a class="cardReport" href="<?= htmlspecialchars($report_url_with_repid); ?>">Report issue</a>
+                                <?php } ?>
+                            </div>
+                            <?php  if (isset($_GET['repid']) && $_GET['repid'] == $video_data['YoutubeID'] ) { ?>
+                            <div class="card repcard">
+                                <?php if (!isset($_GET['rep'])) { ?>
+                                    <form action="?<?= htmlspecialchars($base_query_string); ?>&page=<?= $current_page; ?><?= isset($_GET['repid']) ? '&repid='.urlencode($_GET['repid']) : ''; ?>#RepForm" method="POST" id="RepForm">
+                                        <input type="hidden" id="RepYtId" name="RepYtId" value="<?= htmlspecialchars($video_data['YoutubeID']); ?>">
+                                        <input type="hidden" name="page" value="<?= $current_page; // Pass current page for POST context ?>">
+                                        <?php 
+                                        // Ensure $creators is available and correctly passed for POST context
+                                        // $creators should be set from the main GET processing block.
+                                        if(isset($creators) && is_array($creators)) {
+                                            foreach ($creators as $creator_id_form): ?>
+                                                <input type="hidden" name="iid[]" value="<?= htmlspecialchars($creator_id_form); ?>">
+                                            <?php endforeach; 
+                                        }?>
+                                        <textarea id="repimp" placeholder="Describe the issue ..." name="repimp" maxlength="5000" required></textarea><br>
+                                        <input type="submit" class="RepInlineSubmit" value="Send">
+                                    </form>
+                                <?php } else if (isset($_GET['rep']) && $_GET['rep'] == "success") { ?>
+                                         <p style="margin:-2px; margin-left: 20px;"> Thanks for your report! </p>
+                                <?php } else if (isset($_GET['rep']) && $_GET['rep'] == "fail") { ?>
+                                         <p style="margin:-2px; margin-left: 20px;"> Your report was not submitted, please try again. </p>
+                                <?php } ?>
+                            </div>  
+                        <?php  } // End of repid check for report form display
+                        } // End of card type if/else (playlist vs video)
+                    endforeach; // End of $cards_for_this_page loop
+                } // End of if !empty($cards_for_this_page)
                 ?>
-                        <div class="card">
-                        <label for="vidTITLE" id="TI<?= htmlspecialchars($video['YoutubeID']); ?>"><h4><a alt="<?= htmlspecialchars($video['YoutubeID']); ?>" id="TI<?= htmlspecialchars($video['YoutubeID']); ?>" href="https://youtube.com/watch?v=<?= htmlspecialchars($video['YoutubeID']); ?>" target="_blank" rel="noopener noreferrer"> <span class="TitleWidth"><?= htmlspecialchars($video['Title']); ?></span></h4></label>
-                            <div class="ytimg"><img loading="lazy" alt="Thumbnail" src="https://i.ytimg.com/vi/<?= htmlspecialchars($video['YoutubeID']); ?>/hqdefault.jpg"></a></div>
-                            <?php if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID']) { //RepID is set in cardReport(href)?>
-                            <a class="cardReport" href="<?= htmlspecialchars($report_url_without_repid); ?>">Report issue</a>
-                            <?php } else { ?>
-                            <a class="cardReport" href="<?= htmlspecialchars($report_url_with_repid); ?>">Report issue</a>
-                            <?php } ?>
-                        </div>
-                    <?php  if (isset($_GET['repid']) and $_GET['repid'] == $video['YoutubeID'] ) { //RepID is set in cardReport(href)?>
-                        <div class="card repcard">
-                            <?php if (!isset($_GET['rep'])) { //report function popout?>
-                                <form action="?<?= htmlspecialchars($base_query_string); ?>&page=<?= $current_page; ?><?= isset($_GET['repid']) ? '&repid='.urlencode($_GET['repid']) : ''; ?>#RepForm" method="POST" id="RepForm">
-                                    <input type="hidden" id="RepYtId" name="RepYtId" value="<?= htmlspecialchars($video['YoutubeID']); ?>">
-                                    <input type="hidden" name="page" value="<?= $current_page; ?>">
-                                    <?php foreach ($creators as $creator_id): ?><input type="hidden" name="iid[]" value="<?= htmlspecialchars($creator_id); ?>"><?php endforeach; ?>
-                                    <textarea id="repimp" placeholder="Describe the issue ..." name="repimp" maxlength="5000" required></textarea><br>
-                                    <input type="submit" class="RepInlineSubmit" value="Send">
-                                </form>
-                            <?php } else if (isset($_GET['rep']) and $_GET['rep'] == "success") { // Report confirmation function?>
-                                     <p style="margin:-2px; margin-left: 20px;"> Thanks for your report! </p>
-                            <?php } else if (isset($_GET['rep'])and $_GET['rep'] == "fail") { ?>
-                                     <p style="margin:-2px; margin-left: 20px;"> Your report was not submitted, please try again. </p>
-                            <?php } ?>
-                        </div>  
-                    <?php  } } ?>
-                <?php endforeach; ?>
             </article>
             <?php // --- Pagination Links ---
                 // Show nav container if a search was done (e.g., creators selected)
@@ -661,10 +1067,10 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
 
 
                         <?php // Conditionally show the Next button block only if multiple pages exist
-                            if ($total_pages > 1):
+                            if ($display_total_pages > 1):
                         ?>
                             <?php // --- Next Page Link --- (Handles enabled/disabled state internally)
-                                if ($current_page < $total_pages): ?>
+                                if ($current_page < $display_total_pages): ?>
                                 <li><a href="?<?= htmlspecialchars($base_query_string); ?>&page=<?= $current_page + 1; ?><?= isset($_GET['repid']) ? '&repid='.urlencode($_GET['repid']) : ''; ?>">Next »</a></li>
                             <?php else: ?>
                                 <li class="disabled"><span>Next »</span></li>
