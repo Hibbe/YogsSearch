@@ -104,97 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 } // END OF if ($_SERVER['REQUEST_METHOD'] === 'POST')
 
-function getVideosByCreators(PDO $pdo, array $creators, int $page = 1, int $limit = 20, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0) {
-
-    $creator_list = str_repeat('?, ', count($creators) - 1) . '?';
-    $creator_count = count($creators);
-    $offset = ($page - 1) * $limit;
-
-    // --- START: Dynamic SQL Building ---
-    $sqlBaseSelect = "SELECT vl.YoutubeID, vl.Title, vl.PlaylistID";
-    $sqlBaseFrom = "FROM VideoList vl
-                    INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
-                    INNER JOIN CastList cl ON cl.CastID = vc.CastID";
-    $sqlBaseWhere = "WHERE cl.CastName IN ($creator_list)"; // Base creator match
-
-    $sqlConditions = ""; // Additional WHERE conditions
-    $filterParams = []; // Parameters for WHERE/HAVING filters
-
-    // Channel Filter
-    if (!empty($filter_channel)) {
-        $sqlConditions .= " AND vl.channelName = :channelName"; 
-        $filterParams[':channelName'] = $filter_channel;       
-    }
-    // Title Filter
-    if (!empty($filter_title)) {
-        $sqlConditions .= " AND vl.Title LIKE :titleSearch";
-        $filterParams[':titleSearch'] = '%' . $filter_title . '%';
-    }
-    // Date Start Filter
-    if (!empty($filter_date_start)) {
-        $sqlConditions .= " AND DATE(vl.publishedAt) >= :dateStart";
-        $filterParams[':dateStart'] = $filter_date_start;
-    }
-    // Date End Filter
-    if (!empty($filter_date_end)) {
-        $sqlConditions .= " AND DATE(vl.publishedAt) <= :dateEnd";
-        $filterParams[':dateEnd'] = $filter_date_end;
-    }
-    // --- > NEW: Exclude Live Filter <---
-    if ($filter_exclude_live === 1) {
-        // Add condition to exclude if wasLive is 1 (or TRUE)
-        // Adjust '0' if your boolean logic is different (e.g., 'FALSE')
-        $sqlConditions .= " AND vl.wasLive = 0";
-    }
-
-    // Grouping
-    $sqlGroupBy = "GROUP BY vl.VideoID";
-
-    // --- > REVISED: Having Clause <---
-    $sqlHaving = "HAVING COUNT(DISTINCT cl.CastID) = :creator_count"; // Ensure all selected are present
-    if ($filter_exclusive_cast === 1) {
-        // If exclusive is checked, add condition for total cast count
-        $sqlHaving .= " AND (SELECT COUNT(vc_total.CastID) FROM VideoCast vc_total WHERE vc_total.VideoID = vl.VideoID) = :creator_count";
-        // Note: We reuse :creator_count placeholder, value is the same
-    }
-    // Order by published date, newest first
-    $sqlOrderBy = "ORDER BY vl.publishedAt DESC";
-
-    // Limit/Offset
-    $sqlLimitOffset = "LIMIT :limit OFFSET :offset";
-
-    // Combine SQL parts
-    $sql = $sqlBaseSelect . " " . $sqlBaseFrom . " " . $sqlBaseWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy . " " . $sqlLimitOffset;
-    // --- END: Dynamic SQL Building ---
-
-    $stmt = $pdo->prepare($sql);
-
-    // Bind IN list parameters (creators)
-    $paramIndex = 1; // Start parameter index at 1
-    foreach ($creators as $creator) {
-        $stmt->bindValue($paramIndex++, $creator, PDO::PARAM_STR);
-    }
-
-    // Bind HAVING parameter(s)
-    $stmt->bindValue(':creator_count', $creator_count, PDO::PARAM_INT);
-    // if ($filter_exclusive_cast === 1) { // Bind only if needed? Or always bind 0/1? Let's bind always for simplicity if using placeholder approach.
-    //    $stmt->bindValue(':filter_exclusive_cast', $filter_exclusive_cast, PDO::PARAM_INT);
-    // }
-    // --> Binding filter_exclusive_cast not needed with the SQL structure chosen above
-
-    // Bind Filter parameters
-    foreach ($filterParams as $placeholder => $value) {
-        $stmt->bindValue($placeholder, $value, PDO::PARAM_STR);
-    }
-
-    // Bind Limit/Offset
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
 function countTotalVideosByCreators(PDO $pdo, array $creators, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0): int {
 
     $creator_list = str_repeat('?, ', count($creators) - 1) . '?';
@@ -276,101 +185,14 @@ function countTotalVideosByCreators(PDO $pdo, array $creators, string $filter_ch
     return (int)$stmt->fetchColumn();
 }
 
-function getAllMatchingVideoIds(PDO $pdo, array $creators, string $filter_channel = '', string $filter_title = '', string $filter_date_start = '', string $filter_date_end = '', int $filter_exclude_live = 0, int $filter_exclusive_cast = 0): array {
-    $creator_list_placeholders = '';
-    if (!empty($creators)) {
-        $creator_list_placeholders = str_repeat('?, ', count($creators) - 1) . '?';
-    }
-    $creator_count = count($creators);
-
-    // Base SQL parts
-    $sqlSelect = "SELECT vl.YoutubeID";
-    $sqlFrom = "FROM VideoList vl";
-    $sqlJoins = "";
-    $sqlWhere = "WHERE 1=1"; // Start with a true condition to easily append filters
-    $sqlGroupBy = "";
-    $sqlHaving = "";
-    $sqlOrderBy = "ORDER BY vl.publishedAt DESC"; // Consistent ordering
-    $sqlLimit = "LIMIT 51";
-
-    $filterParams = []; // Parameters for WHERE/HAVING filters
-
-    // If creators are selected, add joins and specific where/having clauses
-    if (!empty($creators)) {
-        $sqlJoins = " INNER JOIN VideoCast vc ON vl.VideoID = vc.VideoID
-                      INNER JOIN CastList cl ON cl.CastID = vc.CastID";
-        $sqlWhere = " WHERE cl.CastName IN ($creator_list_placeholders)"; // Note: This replaces "WHERE 1=1"
-        $sqlGroupBy = " GROUP BY vl.VideoID, vl.YoutubeID"; // Group by VideoID (and YoutubeID as it's selected)
-        $sqlHaving = " HAVING COUNT(DISTINCT cl.CastID) = :creator_count";
-        if ($filter_exclusive_cast === 1) {
-            $sqlHaving .= " AND (SELECT COUNT(vc_total.CastID) FROM VideoCast vc_total WHERE vc_total.VideoID = vl.VideoID) = :creator_count";
-        }
-    }
-
-    $sqlConditions = ""; // Additional WHERE conditions for filters
-
-    // Channel Filter
-    if (!empty($filter_channel)) {
-        $sqlConditions .= " AND vl.channelName = :channelName";
-        $filterParams[':channelName'] = $filter_channel;
-    }
-    // Title Filter
-    if (!empty($filter_title)) {
-        $sqlConditions .= " AND vl.Title LIKE :titleSearch";
-        $filterParams[':titleSearch'] = '%' . $filter_title . '%';
-    }
-    // Date Start Filter
-    if (!empty($filter_date_start)) {
-        $sqlConditions .= " AND DATE(vl.publishedAt) >= :dateStart";
-        $filterParams[':dateStart'] = $filter_date_start;
-    }
-    // Date End Filter
-    if (!empty($filter_date_end)) {
-        $sqlConditions .= " AND DATE(vl.publishedAt) <= :dateEnd";
-        $filterParams[':dateEnd'] = $filter_date_end;
-    }
-    // Exclude Live Filter
-    if ($filter_exclude_live === 1) {
-        $sqlConditions .= " AND vl.wasLive = 0";
-    }
-
-    // Combine SQL parts
-    // If $sqlWhere was replaced by creator condition, $sqlConditions should be appended to it.
-    // Otherwise, $sqlConditions are appended to "WHERE 1=1"
-    if (!empty($creators)) {
-         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy . " " . $sqlLimit;
-    } else {
-         $sql = $sqlSelect . " " . $sqlFrom . " " . $sqlJoins . " " . $sqlWhere /* which is WHERE 1=1 */ . " " . $sqlConditions . " " . $sqlGroupBy . " " . $sqlHaving . " " . $sqlOrderBy . " " . $sqlLimit;
-    }
-
-    $stmt = $pdo->prepare($sql);
-
-    // Bind parameters
-    $paramIndex = 1;
-    if (!empty($creators)) {
-        foreach ($creators as $creator) {
-            $stmt->bindValue($paramIndex++, $creator, PDO::PARAM_STR);
-        }
-        $stmt->bindValue(':creator_count', $creator_count, PDO::PARAM_INT);
-    }
-
-    foreach ($filterParams as $placeholder => $value) {
-        $stmt->bindValue($placeholder, $value); // PDO will attempt to infer type
-    }
-
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_COLUMN, 0); // Fetches all YoutubeIDs into a single, flat array
-}
-
 function generate_card_list(PDO $pdo, array $creators, string $filter_channel, string $filter_title, string $filter_date_start, string $filter_date_end, int $filter_exclude_live, int $filter_exclusive_cast, array $playlist_details_lookup_for_card_generation, bool $can_group_playlists_overall) {
     
     $card_list = [];
     $processed_playlist_ids_in_card_list = []; // Tracks PlaylistIDs already turned into a playlist card
+    $temp_filtered_members_by_playlist = []; 
 
     // --- 1. SQL Query to fetch a broad set of candidate videos ---
-    // This SQL is similar to getVideosByCreators but without page-specific offset/limit,
-    // and includes all necessary fields for card generation.
-    // It will be limited by MAX_VIDEOS_TO_SCAN_FOR_CARDS.
+    // Limited by MAX_VIDEOS_TO_SCAN_FOR_CARDS.
 
     $creator_list_sql = str_repeat('?, ', count($creators) - 1) . '?';
     $creator_count_sql = count($creators);
@@ -427,14 +249,28 @@ function generate_card_list(PDO $pdo, array $creators, string $filter_channel, s
 
     // --- 2. PHP Processing to build the list of "cards" ---
     if (empty($scanned_videos)) {
-        return []; // No videos found from scan
+        return ['cards' => [], 'scan_limit_hit' => false];
+    }
+    // Pre-process $scanned_videos to collect filtered member IDs for playlists
+    foreach ($scanned_videos as $video_data_for_id_collection) {
+        if (!empty($video_data_for_id_collection['PlaylistID']) &&
+            !empty($video_data_for_id_collection['YoutubeID'])) {
+            // Only add if PlaylistID and YoutubeID are present
+            $temp_filtered_members_by_playlist[$video_data_for_id_collection['PlaylistID']][] =
+                $video_data_for_id_collection['YoutubeID'];
+        }
+    }
+
+    // Ensure uniqueness within each playlist's ID list (good practice)
+    foreach ($temp_filtered_members_by_playlist as $pl_id => $ids) {
+        $temp_filtered_members_by_playlist[$pl_id] = array_unique($ids);
     }
 
     // This flag determines if we are allowed to group playlists at all.
     // We get this based on a quick check if the scanned videos are more than 1.
     // The original `$total_videos > 1` check for playlist grouping.
     $allow_playlist_grouping = $can_group_playlists_overall;
-
+    $scan_limit_was_hit = (count($scanned_videos) === MAX_VIDEOS_TO_SCAN_FOR_CARDS);
 
     foreach ($scanned_videos as $video_data) {
         $is_playlist_video = !empty($video_data['PlaylistID']);
@@ -454,7 +290,8 @@ function generate_card_list(PDO $pdo, array $creators, string $filter_channel, s
                     'name' => $playlist_details_for_this_card['PlaylistName'],
                     'youtube_playlist_id' => $playlist_details_for_this_card['YouTubePlaylistID'],
                     'first_video_youtube_id' => $playlist_details_for_this_card['FirstVideoYoutubeID'],
-                    'total_video_count_in_playlist' => $playlist_details_for_this_card['VideoCount'] ?? 0 // From your existing simple count
+                    'total_video_count_in_playlist' => $playlist_details_for_this_card['VideoCount'] ?? 0, // From your existing simple count
+                    'filtered_youtube_ids' => $temp_filtered_members_by_playlist[$current_playlist_id] ?? []
                 ];
                 $processed_playlist_ids_in_card_list[] = $current_playlist_id;
             } else {
@@ -480,7 +317,7 @@ function generate_card_list(PDO $pdo, array $creators, string $filter_channel, s
             ];
         }
     }
-    return $card_list;
+    return ['cards' => $card_list, 'scan_limit_hit' => $scan_limit_was_hit];
 }
 
 function insertreport($pdo,array $data) { // Report function input
@@ -496,11 +333,7 @@ function insertreport($pdo,array $data) { // Report function input
   }
 // end funct
 
-// $videos = []; // This will be replaced by $cards_for_this_page later
-// $total_videos = 0; // This will be replaced by $total_available_cards
 $current_page = 1; // Default page
-// $results_per_page = 20; // Will use CARDS_PER_PAGE constant instead
-// $total_pages = 0; // Will be $display_total_pages
 $creators = []; // Initialize creators array
 $urlrep = ''; // Initialize URL rep string - review if still needed for report form
 $base_query_string = ''; // To store iid parameters for pagination links
@@ -696,12 +529,14 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
             }
         } //end of this PLAYLIST block
 
-            $all_possible_cards = generate_card_list(
+            $card_generation_result = generate_card_list(
             $pdo, $creators, $filter_channel, $filter_title, 
             $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast,
             $playlist_details_lookup, // Pass the pre-fetched playlist details
             $can_group_playlists_globally 
         );
+
+        $all_possible_cards = $card_generation_result['cards'];
 
         $total_available_cards = count($all_possible_cards);
 
@@ -732,89 +567,58 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
         } else {
             $cards_for_this_page = []; // Ensure it's an empty array if no cards
         }
-
-        // Get the total count of videos FIRST
-        // $total_videos = countTotalVideosByCreators(...); // This line IS USED for $preliminary_video_count_for_grouping_check above this section
-
-        
+        // --- NEW Page-Specific "Open as Playlist" URL Generation ---
         $playlist_url = null;
-        $video_ids_for_url_playlist = []; 
+        $ids_for_page_playlist_url = []; // To collect YoutubeIDs for the URL
+        $current_ids_count_for_url = 0;
+        $MAX_URL_IDS_LIMIT = 50; // Max YouTube IDs for the playlist URL
 
-        // Use the preliminary raw video count to decide if this feature is active
-        if ($preliminary_video_count_for_grouping_check > 1 && $preliminary_video_count_for_grouping_check <= 50) {
-            $fetched_video_ids_for_feature = getAllMatchingVideoIds( // Call the (now limited) function
-                $pdo,
-                $creators,
-                $filter_channel,
-                $filter_title,
-                $filter_date_start,
-                $filter_date_end,
-                $filter_exclude_live,
-                $filter_exclusive_cast
-            ); 
+        if (!empty($cards_for_this_page)) { // Only proceed if there are cards on the current page
+            foreach ($cards_for_this_page as $card_item) {
+                if ($current_ids_count_for_url >= $MAX_URL_IDS_LIMIT) {
+                    break; // Stop if we've hit the 50 ID limit for the URL
+                }
 
-            if (!empty($fetched_video_ids_for_feature)) {
-                // Take only up to the first 50 IDs for the playlist URL
-                $video_ids_for_url_playlist = array_slice($fetched_video_ids_for_feature, 0, 50);
-
-                if (!empty($video_ids_for_url_playlist)) {
-                    $playlist_video_ids_string = implode(',', $video_ids_for_url_playlist);
-                    $playlist_url = 'http://www.youtube.com/watch_videos?video_ids=' . $playlist_video_ids_string;
+                if ($card_item['type'] === 'video') {
+                    // Ensure 'data' and 'YoutubeID' exist
+                    if (isset($card_item['data']['YoutubeID'])) {
+                        if (!in_array($card_item['data']['YoutubeID'], $ids_for_page_playlist_url)) {
+                            $ids_for_page_playlist_url[] = $card_item['data']['YoutubeID'];
+                            $current_ids_count_for_url++;
+                        }
+                    }
+                } elseif ($card_item['type'] === 'playlist') {
+                    // Use the 'filtered_youtube_ids' that generate_card_list now provides
+                    if (isset($card_item['filtered_youtube_ids']) && is_array($card_item['filtered_youtube_ids'])) {
+                        foreach ($card_item['filtered_youtube_ids'] as $yt_id) {
+                            if ($current_ids_count_for_url >= $MAX_URL_IDS_LIMIT) {
+                                break 2; // Break out of both this inner loop and the outer card loop
+                            }
+                            if (!in_array($yt_id, $ids_for_page_playlist_url)) {
+                                $ids_for_page_playlist_url[] = $yt_id;
+                                $current_ids_count_for_url++;
+                            }
+                        }
+                    }
                 }
             }
         }
-        
 
-
-        /* if ($total_videos > 0) {
-            $total_pages = (int)ceil($total_videos / $results_per_page);
-
-            // Ensure current page is not out of bounds
-            if ($current_page > $total_pages) {
-                $current_page = $total_pages;
-            }
-
-             // Fetch only the videos for the current page
-             $videos = getVideosByCreators($pdo, $creators, $current_page, $results_per_page, $filter_channel, $filter_title, $filter_date_start, $filter_date_end, $filter_exclude_live, $filter_exclusive_cast); 
+        // Only create a URL if we have at least 2 videos for a meaningful playlist
+        if (!empty($ids_for_page_playlist_url) && count($ids_for_page_playlist_url) > 1) {
+            $playlist_video_ids_string = implode(",", $ids_for_page_playlist_url);
+            // IMPORTANT: Replace 'https://www.youtube.com/watch_videos?video_ids=' with the correct YouTube playlist URL structure.
+            // e.g., 'https://www.youtube.com/watch_videos?video_ids=' or 'https://www.youtube.com/playlist?list=' (if creating a temp playlist is possible this way)
+            // The PDF used 'http://www.youtube.com/watch_videos?video_ids=', I used '.../4' as a placeholder. This needs verification.
+            $playlist_url = 'https://www.youtube.com/watch_videos?video_ids=' . $playlist_video_ids_string; 
         } else {
-             // No videos found, reset pages
-             $total_pages = 0;
-             $current_page = 1; // Or 0, depending on preference
+            $playlist_url = null; // Not enough videos for a meaningful playlist
+            // Ensure $ids_for_page_playlist_url is empty if no URL, so button count is 0 or button hides
+            $ids_for_page_playlist_url = [];
         }
-
-            $playlist_details_lookup = [];
-        if (!empty($videos)) {
-            $unique_playlist_ids = [];
-            // Collect all unique PlaylistIDs from the fetched videos
-            foreach ($videos as $video) {
-                if (!empty($video['PlaylistID']) && !in_array($video['PlaylistID'], $unique_playlist_ids)) {
-                    $unique_playlist_ids[] = $video['PlaylistID'];
-                }
-            }
-
-            // If there are any unique playlist IDs in the results, fetch their details
-            if (!empty($unique_playlist_ids)) {
-                 try {
-                     // Use the existing $pdo connection
-                     $placeholders = implode(',', array_fill(0, count($unique_playlist_ids), '?'));
-                     $sql_playlists = "SELECT PlaylistID, PlaylistName, YouTubePlaylistID, FirstVideoYoutubeID, (SELECT COUNT(*) FROM VideoList WHERE VideoList.PlaylistID = Playlists.PlaylistID) as VideoCount FROM Playlists WHERE PlaylistID IN ($placeholders)";
-                     $stmt_playlists = $pdo->prepare($sql_playlists);
-                     $stmt_playlists->execute($unique_playlist_ids);
-
-                     // Store results in a lookup array keyed by PlaylistID
-                     while ($row = $stmt_playlists->fetch(PDO::FETCH_ASSOC)) {
-                         $playlist_details_lookup[$row['PlaylistID']] = $row;
-                     }
-
-                 } catch (PDOException $e) {
-                     // Handle database errors gracefully
-                     error_log("Database Error fetching playlist details: " . $e->getMessage());
-                     // Optionally set a user-friendly message to display on the page
-                     // $error_message = "Could not load some playlist details.";
-                 }
-                 
-            }
-        } */
+        // This variable name is what your HTML button part expects for the count (based on the PDF)
+        $video_ids_for_url_playlist = $ids_for_page_playlist_url;
+        // --- END NEW Page-Specific "Open as Playlist" URL Generation ---
 
     } catch (PDOException $e) {
         echo "Database error: " . $e->getMessage();
@@ -833,11 +637,6 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
           // Set a message or handle appropriately
      }
 }
-// This line might be removed or adjusted depending on where $urlrep is truly needed
-// if ($creators != 1) {$urlrep = implode("&iid%5B%5D=", $creators);} // <<< Review if still needed here
-
-
-
 
 ?>
 <!DOCTYPE html>
@@ -917,7 +716,7 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
     </head>
     <body>
         <header> 
-            <img width="800" height="289" src="yogsearch.webp" alt="Yogsearch logo" class="yogart">
+            <a href="/"><img width="800" height="289" src="yogsearch.webp" alt="Yogsearch logo" class="yogart"></a>
         </header>
         <main>
             <nav class="pagination">
@@ -965,24 +764,21 @@ else if (isset($_GET['iid']) && is_array($_GET['iid']) && count($_GET['iid']) >=
                             echo '  <div class="flex-spacer-results-header"></div>';
                         if (isset($playlist_url) && $playlist_url && !empty($video_ids_for_url_playlist)) {
                             $count_for_button_display = count($video_ids_for_url_playlist);
+                            if ($count_for_button_display > 1) { 
                             echo '  <div class="export-playlist-container">'; 
-                            echo '    <span class="export-playlist-text">Open as playlist (' . $count_for_button_display . ' videos)</span>';
+                            echo '    <span class="export-playlist-text">Open page as playlist (' . $count_for_button_display . ' videos)</span>';
                             echo '    <a href="' . htmlspecialchars($playlist_url) . '" target="_blank" rel="noopener noreferrer" class="export-playlist-icon-button" title="Open as playlist (' . $count_for_button_display . ' videos)">';
                             echo '      <span class="playlist-icon-char">⎙</span>'; // Ensure this character displays correctly or use an image/SVG
                             echo '    </a>';
                             echo '  </div>';
+                            }
                         }
                             echo '</div>'; // End of .results-header
                         }
                 ?>
             <article class="searchresults">  <?php
-                // The $processed_playlists_for_card array and its logic within this loop are no longer needed here.
-                // The generate_card_list() function has already determined unique playlist cards.
-
-                if (empty($cards_for_this_page) && !empty($creators)) {
-                    // This case is already handled by the message "No items found matching your criteria."
-                    // So, no specific message needed here unless you want a different one inside the article.
-                } elseif (!empty($cards_for_this_page)) { // Only loop if there are cards to display
+                if (empty($cards_for_this_page) && !empty($creators)) {} 
+                elseif (!empty($cards_for_this_page)) { // Only loop if there are cards to display
                     
                     foreach ($cards_for_this_page as $card_item):
                         if ($card_item['type'] === 'playlist') {
